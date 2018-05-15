@@ -82,8 +82,7 @@ void prtmsg(void *sock, const char *fmt, ...)
 }
 
 ConfigurationParser::ConfigurationParser()
-   : cf_ (nullptr)
-   , scan_error_ (nullptr)
+   : scan_error_ (nullptr)
    , scan_warning_ (nullptr)
    , init_res_ (nullptr)
    , store_res_ (nullptr)
@@ -96,12 +95,7 @@ ConfigurationParser::ConfigurationParser()
    , r_last_ (0)
    , resources_ (0)
    , res_head_(nullptr)
-   , config_default_filename_ (nullptr)
-   , config_dir_ (nullptr)
-   , config_include_dir_ (nullptr)
-   , use_config_include_dir_ (false)
-   , config_include_naming_format_ (nullptr)
-   , used_config_path_ (nullptr) {
+   , use_config_include_dir_ (false) {
    return;
 }
 
@@ -125,9 +119,7 @@ ConfigurationParser::ConfigurationParser(
 {
    cf_ = cf;
    use_config_include_dir_ = false;
-   config_include_dir_ = NULL;
    config_include_naming_format_ = "%s/%s/%s.conf";
-   used_config_path_ = NULL;
    scan_error_ = ScanError;
    scan_warning_ = scan_warning;
    init_res_ = init_res;
@@ -140,30 +132,14 @@ ConfigurationParser::ConfigurationParser(
    r_last_ = r_last;
    resources_ = resources;
    res_head_ = res_head;
-   config_default_filename_ = bstrdup(config_default_filename);
-   config_include_dir_ = bstrdup(config_include_dir);
+   config_default_filename_ = config_default_filename;
+   config_include_dir_ = config_include_dir;
 }
 
 ConfigurationParser::~ConfigurationParser() {
    for (int i = r_first_; i<= r_last_; i++) {
       FreeResource(res_head_[i-r_first_], i);
       res_head_[i-r_first_] = NULL;
-   }
-
-   if (config_default_filename_) {
-      free((void *)config_default_filename_);
-   }
-
-   if (config_dir_) {
-      free((void *)config_dir_);
-   }
-
-   if (config_include_dir_) {
-      free((void *)config_include_dir_);
-   }
-
-   if (used_config_path_) {
-      free((void *)used_config_path_);
    }
 }
 
@@ -183,8 +159,8 @@ bool ConfigurationParser::ParseConfig()
    if (!FindConfigPath(config_path)) {
       Jmsg0(NULL, M_ERROR_TERM, 0, _("Failed to find config filename.\n"));
    }
-   used_config_path_ = bstrdup(config_path.c_str());
-   Dmsg1(100, "config file = %s\n", used_config_path_);
+   used_config_path_ = config_path.c_str();
+   Dmsg1(100, "config file = %s\n", used_config_path_.c_str());
    return ParseConfigFile(config_path.c_str(), NULL, scan_error_, scan_warning_);
 }
 
@@ -517,7 +493,7 @@ bool ConfigurationParser::GetConfigFile(PoolMem &full_path, const char *config_d
       full_path.strcpy(config_dir);
       if (PathAppend(full_path, config_filename)) {
          if (PathExists(full_path)) {
-            config_dir_ = bstrdup(config_dir);
+            config_dir_ = config_dir;
             found = true;
          }
       }
@@ -530,16 +506,16 @@ bool ConfigurationParser::GetConfigIncludePath(PoolMem &full_path, const char *c
 {
    bool found = false;
 
-   if (config_include_dir_) {
+   if (!config_include_dir_.empty()) {
       /*
        * Set full_path to the initial part of the include path,
        * so it can be used as result, even on errors.
        * On success, full_path will be overwritten with the full path.
        */
       full_path.strcpy(config_dir);
-      PathAppend(full_path, config_include_dir_);
+      PathAppend(full_path, config_include_dir_.c_str());
       if (PathIsDirectory(full_path)) {
-         config_dir_ = bstrdup(config_dir);
+         config_dir_ = config_dir;
          /*
           * Set full_path to wildcard path.
           */
@@ -563,11 +539,11 @@ bool ConfigurationParser::FindConfigPath(PoolMem &full_path)
    PoolMem config_dir;
    PoolMem config_path_file;
 
-   if (!cf_) {
+   if (cf_.empty()) {
       /*
        * No path is given, so use the defaults.
        */
-      found = GetConfigFile(full_path, get_default_configdir(), config_default_filename_);
+      found = GetConfigFile(full_path, get_default_configdir(), config_default_filename_.c_str());
       if (!found) {
          config_path_file.strcpy(full_path);
          found = GetConfigIncludePath(full_path, get_default_configdir());
@@ -578,74 +554,49 @@ bool ConfigurationParser::FindConfigPath(PoolMem &full_path)
                  "\"%s\" (config file path) and \"%s\" (config include directory).\n"),
                config_path_file.c_str(), full_path.c_str());
       }
-   } else if (PathExists(cf_)) {
+   } else if (PathExists(cf_.c_str())) {
       /*
        * Path is given and exists.
        */
-      if (PathIsDirectory(cf_)) {
-         found = GetConfigFile(full_path, cf_, config_default_filename_);
+      if (PathIsDirectory(cf_.c_str())) {
+         found = GetConfigFile(full_path, cf_.c_str(), config_default_filename_.c_str());
          if (!found) {
             config_path_file.strcpy(full_path);
-            found = GetConfigIncludePath(full_path, cf_);
+            found = GetConfigIncludePath(full_path, cf_.c_str());
          }
          if (!found) {
             Jmsg3(NULL, M_ERROR, 0,
                   _("Failed to find configuration files under directory \"%s\". "
                   "Did look for \"%s\" (config file path) and \"%s\" (config include directory).\n"),
-                  cf_, config_path_file.c_str(), full_path.c_str());
+                  cf_.c_str(), config_path_file.c_str(), full_path.c_str());
          }
       } else {
-         full_path.strcpy(cf_);
+         full_path.strcpy(cf_.c_str());
          PathGetDirectory(config_dir, full_path);
-         config_dir_ = bstrdup(config_dir.c_str());
+         config_dir_ = config_dir.c_str();
          found = true;
       }
-   } else if (!config_default_filename_) {
+   } else if (config_default_filename_.empty()) {
       /*
        * Compatibility with older versions.
        * If config_default_filename_ is not set,
        * cf_ may contain what is expected in config_default_filename_.
        */
-      found = GetConfigFile(full_path, get_default_configdir(), cf_);
+      found = GetConfigFile(full_path, get_default_configdir(), cf_.c_str());
       if (!found) {
          Jmsg2(NULL, M_ERROR, 0,
                _("Failed to find configuration files at \"%s\" and \"%s\".\n"),
-               cf_, full_path.c_str());
+               cf_.c_str(), full_path.c_str());
       }
    } else {
-      Jmsg1(NULL, M_ERROR, 0, _("Failed to read config file \"%s\"\n"), cf_);
+      Jmsg1(NULL, M_ERROR, 0, _("Failed to read config file \"%s\"\n"), cf_.c_str());
    }
 
    if (found) {
-      set_env("BAREOS_CFGDIR", config_dir_);
+      set_env("BAREOS_CFGDIR", config_dir_.c_str());
    }
 
    return found;
-}
-
-void ConfigurationParser::FreeResources()
-{
-   for (int i = r_first_; i<= r_last_; i++) {
-      FreeResource(res_head_[i-r_first_], i);
-      res_head_[i-r_first_] = NULL;
-   }
-
-   if (config_default_filename_) {
-      free((void *)config_default_filename_);
-   }
-
-   if (config_dir_) {
-      free((void *)config_dir_);
-   }
-
-   if (config_include_dir_) {
-      free((void *)config_include_dir_);
-   }
-
-   if (used_config_path_) {
-      free((void *)used_config_path_);
-   }
-
 }
 
 CommonResourceHeader **ConfigurationParser::save_resources()
@@ -954,8 +905,8 @@ bool ConfigurationParser::GetPathOfResource(PoolMem &path, const char *component
    resourcetype_lowercase.toLower();
 
    if (!component) {
-      if (config_include_dir_) {
-         component = config_include_dir_;
+      if (!config_include_dir_.empty()) {
+         component = config_include_dir_.c_str();
       } else {
          return false;
       }
@@ -977,8 +928,8 @@ bool ConfigurationParser::GetPathOfResource(PoolMem &path, const char *component
       }
    }
 
-   path.strcpy(config_dir_);
-   rel_path.bsprintf(config_include_naming_format_, component, resourcetype_lowercase.c_str(), name);
+   path.strcpy(config_dir_.c_str());
+   rel_path.bsprintf(config_include_naming_format_.c_str(), component, resourcetype_lowercase.c_str(), name);
    PathAppend(path, rel_path);
 
    return true;

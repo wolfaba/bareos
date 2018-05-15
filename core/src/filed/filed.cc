@@ -251,7 +251,7 @@ int main (int argc, char *argv[])
    }
 
    if (!check_resources()) {
-      Emsg1(M_ERROR, 0, _("Please correct configuration file: %s\n"), my_config->get_base_config_path());
+      Emsg1(M_ERROR, 0, _("Please correct configuration file: %s\n"), my_config->get_base_config_path().c_str());
       TerminateFiled(1);
    }
 
@@ -351,7 +351,7 @@ static bool check_resources()
    bool OK = true;
    DirectorResource *director;
    bool need_tls;
-   const char *configfile = my_config->get_base_config_path();
+   const char *configfile = my_config->get_base_config_path().c_str();
 
    LockRes();
 

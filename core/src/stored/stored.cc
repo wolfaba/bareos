@@ -265,7 +265,7 @@ int main (int argc, char *argv[])
    }
 
    if (!check_resources()) {
-      Jmsg((JobControlRecord *)NULL, M_ERROR_TERM, 0, _("Please correct the configuration in %s\n"), my_config->get_base_config_path());
+      Jmsg((JobControlRecord *)NULL, M_ERROR_TERM, 0, _("Please correct the configuration in %s\n"), my_config->get_base_config_path().c_str());
    }
 
    InitReservationsLock();
@@ -357,7 +357,7 @@ static int check_resources()
 {
    bool OK = true;
    bool tls_needed;
-   const char *configfile = my_config->get_base_config_path();
+   const char *configfile = my_config->get_base_config_path().c_str();
 
    if (GetNextRes(R_STORAGE, (CommonResourceHeader *)me) != NULL) {
       Jmsg1(NULL, M_ERROR, 0, _("Only one Storage resource permitted in %s\n"),

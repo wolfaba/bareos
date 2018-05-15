@@ -1267,7 +1267,7 @@ int main(int argc, char *argv[])
    }
 
    if (!check_resources()) {
-      Emsg1(M_ERROR_TERM, 0, _("Please correct configuration file: %s\n"), my_config->get_base_config_path());
+      Emsg1(M_ERROR_TERM, 0, _("Please correct configuration file: %s\n"), my_config->get_base_config_path().c_str());
    }
 
    if (!no_conio) {
@@ -1443,7 +1443,7 @@ static int check_resources()
 
    if (numdir == 0) {
       Emsg1(M_FATAL, 0, _("No Director resource defined in %s\n"
-                          "Without that I don't how to speak to the Director :-(\n"), my_config->get_base_config_path());
+                          "Without that I don't how to speak to the Director :-(\n"), my_config->get_base_config_path().c_str());
       OK = false;
    }
 

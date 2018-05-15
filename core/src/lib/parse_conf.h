@@ -391,7 +391,7 @@ public:
    /*
     * Members
     */
-   const char *cf_;                    /* Config file parameter */
+   std::string cf_;                    /* Config file parameter */
    LEX_ERROR_HANDLER *scan_error_;     /* Error handler if non-null */
    LEX_WARNING_HANDLER *scan_warning_; /* Warning handler if non-null */
    INIT_RES_HANDLER *init_res_;        /* Init resource handler for non default types if non-null */
@@ -437,7 +437,7 @@ public:
    bool ParseConfig();
    bool ParseConfigFile(const char *cf, void *caller_ctx, LEX_ERROR_HANDLER *ScanError = NULL,
                           LEX_WARNING_HANDLER *scan_warning = NULL);
-   const char *get_base_config_path() { return used_config_path_; }
+   std::string get_base_config_path() { return used_config_path_; }
    void FreeResources();
    CommonResourceHeader **save_resources();
    CommonResourceHeader **new_res_head();
@@ -460,14 +460,14 @@ private:
    ConfigurationParser(const ConfigurationParser&) = delete;
    ConfigurationParser operator=(const ConfigurationParser&) = delete;
 
-protected:
-   const char *config_default_filename_;         /* default config filename, that is used, if no filename is given */
-   const char *config_dir_;                      /* base directory of configuration files */
-   const char *config_include_dir_;              /* rel. path to the config include directory
+private:
+   std::string config_default_filename_;         /* default config filename, that is used, if no filename is given */
+   std::string config_dir_;                      /* base directory of configuration files */
+   std::string config_include_dir_;              /* rel. path to the config include directory
                                                      (bareos-dir.d, bareos-sd.d, bareos-fd.d, ...) */
    bool use_config_include_dir_;                 /* Use the config include directory */
-   const char *config_include_naming_format_;    /* Format string for file paths of resources */
-   const char *used_config_path_;                /* Config file that is used. */
+   std::string config_include_naming_format_;    /* Format string for file paths of resources */
+   std::string used_config_path_;                /* Config file that is used. */
 
    const char *get_default_configdir();
    bool GetConfigFile(PoolMem &full_path, const char *config_dir, const char *config_filename);
