@@ -4395,9 +4395,10 @@ static void PrintConfigCb(ResourceItem *items, int i, PoolMem &cfg_str, bool hid
    }
 }
 
-void InitDirConfig(ConfigurationParser *config, const char *configfile, int exit_code)
+ConfigurationParser *InitDirConfig(const char *configfile, int exit_code)
 {
-   config->init(configfile,
+   return new ConfigurationParser (
+                configfile,
                 NULL,
                 NULL,
                 InitResourceCb,
@@ -4409,14 +4410,7 @@ void InitDirConfig(ConfigurationParser *config, const char *configfile, int exit
                 R_FIRST,
                 R_LAST,
                 resources,
-                res_head);
-   config->SetDefaultConfigFilename(CONFIG_FILE);
-   config->SetConfigIncludeDir("bareos-dir.d");
-}
-
-bool ParseDirConfig(ConfigurationParser *config, const char *configfile, int exit_code)
-{
-   InitDirConfig(config, configfile, exit_code);
-
-   return config->ParseConfig();
+                res_head, 
+                CONFIG_FILE, 
+                "bareos-dir.d");
 }

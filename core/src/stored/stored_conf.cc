@@ -907,9 +907,10 @@ static void ParseConfigCb(LEX *lc, ResourceItem *item, int index, int pass)
    }
 }
 
-void InitSdConfig(ConfigurationParser *config, const char *configfile, int exit_code)
+ConfigurationParser *InitSdConfig(const char *configfile, int exit_code)
 {
-   config->init(configfile,
+   return new ConfigurationParser(
+                configfile,
                 NULL,
                 NULL,
                 InitResourceCb,
@@ -921,17 +922,16 @@ void InitSdConfig(ConfigurationParser *config, const char *configfile, int exit_
                 R_FIRST,
                 R_LAST,
                 resources,
-                res_head);
-   config->SetDefaultConfigFilename(CONFIG_FILE);
-   config->SetConfigIncludeDir("bareos-sd.d");
+                res_head, 
+                CONFIG_FILE, 
+                "bareos-sd.d");
 }
 
-bool ParseSdConfig(ConfigurationParser *config, const char *configfile, int exit_code)
+bool ParseSdConfig(const char *configfile, int exit_code)
 {
    bool retval;
 
-   InitSdConfig(config, configfile, exit_code);
-   retval = config->ParseConfig();
+   retval = my_config->ParseConfig();
 
    if (retval) {
       me = (StorageResource *)GetNextRes(R_STORAGE, NULL);

@@ -154,8 +154,7 @@ static void cleanup()
    }
 
    if (my_config) {
-      my_config->FreeResources();
-      free(my_config);
+      delete my_config;
       my_config = NULL;
    }
 

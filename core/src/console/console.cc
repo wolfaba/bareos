@@ -1251,15 +1251,14 @@ int main(int argc, char *argv[])
    if (export_config_schema) {
       PoolMem buffer;
 
-      my_config = new_config_parser();
-      InitConsConfig(my_config, configfile, M_ERROR_TERM);
+      my_config = InitConsConfig(configfile, M_ERROR_TERM);
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       exit(0);
    }
 
-   my_config = new_config_parser();
-   ParseConsConfig(my_config, configfile, M_ERROR_TERM);
+   my_config = InitConsConfig(configfile, M_ERROR_TERM);
+   my_config->ParseConfig();
 
    if (export_config) {
       my_config->DumpResources(prtmsg, NULL);
@@ -1413,8 +1412,7 @@ static void TerminateConsole(int sig)
    }
    already_here = true;
    StopWatchdog();
-   my_config->FreeResources();
-   free(my_config);
+   delete my_config;
    my_config = NULL;
    CleanupCrypto();
    FreePoolMemory(args);

@@ -70,7 +70,7 @@ static bool init_sighandler_sighup();
 /* Exported subroutines */
 extern bool do_reload_config();
 extern void InvalidateSchedules();
-extern bool ParseDirConfig(ConfigurationParser *config, const char *configfile, int exit_code);
+extern bool ParseDirConfig(const char *configfile, int exit_code);
 extern void prtmsg(void *sock, const char *fmt, ...);
 
 /* Imported subroutines */
@@ -344,15 +344,15 @@ int main (int argc, char *argv[])
    if (export_config_schema) {
       PoolMem buffer;
 
-      my_config = new_config_parser();
-      InitDirConfig(my_config, configfile, M_ERROR_TERM);
+      my_config = InitDirConfig(configfile, M_ERROR_TERM);
+      my_config->ParseConfig();
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       goto bail_out;
    }
 
-   my_config = new_config_parser();
-   ParseDirConfig(my_config, configfile, M_ERROR_TERM);
+   my_config = InitDirConfig(configfile, M_ERROR_TERM);
+   my_config->ParseConfig();
 
    if (export_config) {
       my_config->DumpResources(prtmsg, NULL);
@@ -505,8 +505,7 @@ void TerminateDird(int sig)
       PrintMemoryPoolStats();
    }
    if (my_config) {
-      my_config->FreeResources();
-      free(my_config);
+      delete my_config;
       my_config = NULL;
    }
 
@@ -595,7 +594,9 @@ bool do_reload_config()
    prev_config.JobCount = 0;
 
    Dmsg0(100, "Reloading config file\n");
-   bool ok = ParseDirConfig(my_config, configfile, M_ERROR);
+   
+   my_config->err_type_ = M_ERROR;
+   bool ok = my_config->ParseConfig();
 
    if (!ok || !check_resources() || !CheckCatalog(UPDATE_CATALOG) || !InitializeSqlPooling()) {
 

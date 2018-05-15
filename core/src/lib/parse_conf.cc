@@ -81,15 +81,32 @@ void prtmsg(void *sock, const char *fmt, ...)
    va_end(arg_ptr);
 }
 
-ConfigurationParser *new_config_parser()
-{
-   ConfigurationParser *config;
-   config = (ConfigurationParser *)malloc(sizeof(ConfigurationParser));
-   memset(config, 0, sizeof(ConfigurationParser));
-   return config;
+ConfigurationParser::ConfigurationParser()
+   : cf_ (nullptr)
+   , scan_error_ (nullptr)
+   , scan_warning_ (nullptr)
+   , init_res_ (nullptr)
+   , store_res_ (nullptr)
+   , print_res_(nullptr)
+   , err_type_ (0)
+   , res_all_ (nullptr)
+   , res_all_size_ (0)
+   , omit_defaults_ (false)
+   , r_first_ (0)
+   , r_last_ (0)
+   , resources_ (0)
+   , res_head_(nullptr)
+   , config_default_filename_ (nullptr)
+   , config_dir_ (nullptr)
+   , config_include_dir_ (nullptr)
+   , use_config_include_dir_ (false)
+   , config_include_naming_format_ (nullptr)
+   , used_config_path_ (nullptr) {
+   return;
 }
 
-void ConfigurationParser::init(const char *cf,
+ConfigurationParser::ConfigurationParser(
+                  const char *cf,
                   LEX_ERROR_HANDLER *ScanError,
                   LEX_WARNING_HANDLER *scan_warning,
                   INIT_RES_HANDLER *init_res,
@@ -101,7 +118,10 @@ void ConfigurationParser::init(const char *cf,
                   int32_t r_first,
                   int32_t r_last,
                   ResourceTable *resources,
-                  CommonResourceHeader **res_head)
+                  CommonResourceHeader **res_head,
+                  const char* config_default_filename, 
+                  const char* config_include_dir)
+   : ConfigurationParser()
 {
    cf_ = cf;
    use_config_include_dir_ = false;
@@ -120,16 +140,64 @@ void ConfigurationParser::init(const char *cf,
    r_last_ = r_last;
    resources_ = resources;
    res_head_ = res_head;
+   config_default_filename_ = bstrdup(config_default_filename);
+   config_include_dir_ = bstrdup(config_include_dir);
 }
 
-void ConfigurationParser::SetDefaultConfigFilename(const char *filename)
-{
-   config_default_filename_ = bstrdup(filename);
+ConfigurationParser::~ConfigurationParser() {
+   for (int i = r_first_; i<= r_last_; i++) {
+      FreeResource(res_head_[i-r_first_], i);
+      res_head_[i-r_first_] = NULL;
+   }
+
+   if (config_default_filename_) {
+      free((void *)config_default_filename_);
+   }
+
+   if (config_dir_) {
+      free((void *)config_dir_);
+   }
+
+   if (config_include_dir_) {
+      free((void *)config_include_dir_);
+   }
+
+   if (used_config_path_) {
+      free((void *)used_config_path_);
+   }
 }
 
-void ConfigurationParser::SetConfigIncludeDir(const char* rel_path)
+void ConfigurationParser::init(const char *cf,
+                  LEX_ERROR_HANDLER *ScanError,
+                  LEX_WARNING_HANDLER *scan_warning,
+                  INIT_RES_HANDLER *init_res,
+                  STORE_RES_HANDLER *StoreRes,
+                  PRINT_RES_HANDLER *print_res,
+                  int32_t err_type,
+                  void *vres_all,
+                  int32_t res_all_size,
+                  int32_t r_first,
+                  int32_t r_last,
+                  ResourceTable *resources,
+                  CommonResourceHeader **res_head)
 {
-   config_include_dir_ = bstrdup(rel_path);
+/*   cf_ = cf;
+   use_config_include_dir_ = false;
+   config_include_dir_ = NULL;
+   config_include_naming_format_ = "%s/%s/%s.conf";
+   used_config_path_ = NULL;
+   scan_error_ = ScanError;
+   scan_warning_ = scan_warning;
+   init_res_ = init_res;
+   store_res_ = StoreRes;*/
+//   print_res_ = print_res;
+   err_type_ = err_type;
+/*   res_all_ = vres_all;
+   res_all_size_ = res_all_size;
+   r_first_ = r_first;
+   r_last_ = r_last;
+   resources_ = resources;
+   res_head_ = res_head;*/
 }
 
 bool ConfigurationParser::ParseConfig()

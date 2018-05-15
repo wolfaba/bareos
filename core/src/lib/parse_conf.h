@@ -412,22 +412,44 @@ public:
    /*
     * Methods
     */
-   void init(
-      const char *cf,
-      LEX_ERROR_HANDLER *ScanError,
-      LEX_WARNING_HANDLER *scan_warning,
-      INIT_RES_HANDLER *init_res,
-      STORE_RES_HANDLER *StoreRes,
-      PRINT_RES_HANDLER *print_res,
-      int32_t err_type,
-      void *vres_all,
-      int32_t res_all_size,
-      int32_t r_first,
-      int32_t r_last,
-      ResourceTable *resources,
-      CommonResourceHeader **res_head);
+
+   ConfigurationParser();
+   ConfigurationParser (
+                  const char *cf,
+                  LEX_ERROR_HANDLER *ScanError,
+                  LEX_WARNING_HANDLER *scan_warning,
+                  INIT_RES_HANDLER *init_res,
+                  STORE_RES_HANDLER *StoreRes,
+                  PRINT_RES_HANDLER *print_res,
+                  int32_t err_type,
+                  void *vres_all,
+                  int32_t res_all_size,
+                  int32_t r_first,
+                  int32_t r_last,
+                  ResourceTable *resources,
+                  CommonResourceHeader **res_head, 
+                  const char* config_default_filename, 
+                  const char* config_include_dir);
+   
+   ~ConfigurationParser();
+
+   void init(const char *cf,
+                  LEX_ERROR_HANDLER *ScanError,
+                  LEX_WARNING_HANDLER *scan_warning,
+                  INIT_RES_HANDLER *init_res,
+                  STORE_RES_HANDLER *StoreRes,
+                  PRINT_RES_HANDLER *print_res,
+                  int32_t err_type,
+                  void *vres_all,
+                  int32_t res_all_size,
+                  int32_t r_first,
+                  int32_t r_last,
+                  ResourceTable *resources,
+                  CommonResourceHeader **res_head);
+                  
    void SetDefaultConfigFilename(const char *filename);
-   void SetConfigIncludeDir(const char *rel_path);
+   void SetConfigIncludeDir(const char* rel_path);                  
+   
    bool IsUsingConfigIncludeDir() { return use_config_include_dir_; }
    bool ParseConfig();
    bool ParseConfigFile(const char *cf, void *caller_ctx, LEX_ERROR_HANDLER *ScanError = NULL,
@@ -451,6 +473,9 @@ public:
    bool GetPathOfNewResource(PoolMem &path, PoolMem &extramsg, const char *component,
                                  const char *resourcetype, const char *name,
                                  bool error_if_exits = false, bool create_directories = false);
+private:
+   ConfigurationParser(const ConfigurationParser&) {};
+   ConfigurationParser operator=(const ConfigurationParser&) {};
 
 protected:
    const char *config_default_filename_;         /* default config filename, that is used, if no filename is given */

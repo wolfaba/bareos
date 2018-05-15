@@ -354,9 +354,10 @@ bool SaveResource(int type, ResourceItem *items, int pass)
    return (error == 0);
 }
 
-void InitConsConfig(ConfigurationParser *config, const char *configfile, int exit_code)
+ConfigurationParser *InitConsConfig(const char *configfile, int exit_code)
 {
-   config->init(configfile,
+   return new ConfigurationParser (
+                configfile,
                 NULL,
                 NULL,
                 NULL,
@@ -368,15 +369,15 @@ void InitConsConfig(ConfigurationParser *config, const char *configfile, int exi
                 R_FIRST,
                 R_LAST,
                 resources,
-                res_head);
-   config->SetDefaultConfigFilename(CONFIG_FILE);
-   config->SetConfigIncludeDir("bconsole.d");
+                res_head, 
+                CONFIG_FILE, 
+                "bconsole.d");
 }
 
-bool ParseConsConfig(ConfigurationParser *config, const char *configfile, int exit_code)
+bool ParseConsConfig(const char *configfile, int exit_code)
 {
-   InitConsConfig(config, configfile, exit_code);
-   return config->ParseConfig();
+   my_config = InitConsConfig(configfile, exit_code);
+   return my_config->ParseConfig();
 }
 
 /**

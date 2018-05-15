@@ -39,7 +39,7 @@
 
 /* Dummy functions */
 void GeneratePluginEvent(JobControlRecord *jcr, bEventType eventType, void *value) { }
-extern bool ParseDirConfig(ConfigurationParser *config, const char *configfile, int exit_code);
+extern bool ParseDirConfig(const char *configfile, int exit_code);
 
 /* Global variables */
 static int num_files = 0;
@@ -134,7 +134,7 @@ main (int argc, char *const *argv)
    argv += optind;
 
    my_config = new_config_parser();
-   ParseDirConfig(my_config, configfile, M_ERROR_TERM);
+   ParseDirConfig(configfile, M_ERROR_TERM);
 
    MessagesResource *msg;
 
@@ -168,8 +168,7 @@ main (int argc, char *const *argv)
 
    FreeJcr(jcr);
    if (my_config) {
-      my_config->FreeResources();
-      free(my_config);
+      delete my_config;
       my_config = NULL;
    }
 

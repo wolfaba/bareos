@@ -38,7 +38,7 @@
 
 /* Imported Functions */
 extern void *handle_connection_request(void *dir_sock);
-extern bool ParseFdConfig(ConfigurationParser *config, const char *configfile, int exit_code);
+extern bool ParseFdConfig(const char *configfile, int exit_code);
 extern void prtmsg(void *sock, const char *fmt, ...);
 
 /* Forward referenced functions */
@@ -226,15 +226,15 @@ int main (int argc, char *argv[])
    if (export_config_schema) {
       PoolMem buffer;
 
-      my_config = new_config_parser();
-      InitFdConfig(my_config, configfile, M_ERROR_TERM);
+      my_config = new ConfigurationParser;
+      InitFdConfig(configfile, M_ERROR_TERM);
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       goto bail_out;
    }
 
-   my_config = new_config_parser();
-   ParseFdConfig(my_config, configfile, M_ERROR_TERM);
+   my_config = InitFdConfig(configfile, M_ERROR_TERM);
+   my_config->ParseConfig();
 
    if (export_config) {
       my_config->DumpResources(prtmsg, NULL);
@@ -332,8 +332,7 @@ void TerminateFiled(int sig)
       PrintMemoryPoolStats();
    }
    if (my_config) {
-      my_config->FreeResources();
-      free(my_config);
+      delete my_config;
       my_config = NULL;
    }
    TermMsg();

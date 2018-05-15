@@ -51,7 +51,7 @@
 #include "include/jcr.h"
 
 /* Imported functions */
-extern bool ParseSdConfig(ConfigurationParser *config, const char *configfile, int exit_code);
+extern bool ParseSdConfig(const char *configfile, int exit_code);
 extern void prtmsg(void *sock, const char *fmt, ...);
 
 /* Forward referenced functions */
@@ -241,15 +241,14 @@ int main (int argc, char *argv[])
   if (export_config_schema) {
       PoolMem buffer;
 
-      my_config = new_config_parser();
-      InitSdConfig(my_config, configfile, M_ERROR_TERM);
+      my_config = InitSdConfig(configfile, M_ERROR_TERM);
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       goto bail_out;
    }
 
-   my_config = new_config_parser();
-   ParseSdConfig(my_config, configfile, M_ERROR_TERM);
+   my_config = InitSdConfig(configfile, M_ERROR_TERM);
+   ParseSdConfig(configfile, M_ERROR_TERM);
 
    if (export_config) {
       my_config->DumpResources(prtmsg, NULL);
@@ -789,8 +788,7 @@ void TerminateStored(int sig)
       configfile = NULL;
    }
    if (my_config) {
-      my_config->FreeResources();
-      free(my_config);
+      delete my_config;
       my_config = NULL;
    }
 
