@@ -474,8 +474,8 @@ public:
                                  const char *resourcetype, const char *name,
                                  bool error_if_exits = false, bool create_directories = false);
 private:
-   ConfigurationParser(const ConfigurationParser&) {};
-   ConfigurationParser operator=(const ConfigurationParser&) {};
+   ConfigurationParser(const ConfigurationParser&) = delete;
+   ConfigurationParser operator=(const ConfigurationParser&) = delete;
 
 protected:
    const char *config_default_filename_;         /* default config filename, that is used, if no filename is given */
@@ -492,8 +492,6 @@ protected:
    bool FindConfigPath(PoolMem &full_path);
    int GetResourceTableIndex(int resource_type);
 };
-
-ConfigurationParser *new_config_parser();
 
 DLL_IMP_EXP void prtmsg(void *sock, const char *fmt, ...);
 

@@ -358,11 +358,11 @@ ConfigurationParser *InitConsConfig(const char *configfile, int exit_code)
 {
    return new ConfigurationParser (
                 configfile,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
-                NULL,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
                 exit_code,
                 (void *)&res_all,
                 res_all_size,

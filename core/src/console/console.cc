@@ -51,12 +51,9 @@
 
 /* Exported variables */
 ConsoleResource *me = NULL;                    /* Our Global resource */
-ConfigurationParser *my_config = NULL;             /* Our Global config */
+ConfigurationParser *my_config = nullptr;             /* Our Global config */
 
 //extern int rl_catch_signals;
-
-/* Imported functions */
-extern bool ParseConsConfig(ConfigurationParser *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 static void TerminateConsole(int sig);

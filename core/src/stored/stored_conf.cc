@@ -911,11 +911,11 @@ ConfigurationParser *InitSdConfig(const char *configfile, int exit_code)
 {
    return new ConfigurationParser(
                 configfile,
-                NULL,
-                NULL,
+                nullptr,
+                nullptr,
                 InitResourceCb,
                 ParseConfigCb,
-                NULL,
+                nullptr,
                 exit_code,
                 (void *)&res_all,
                 res_all_size,

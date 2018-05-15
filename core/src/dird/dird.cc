@@ -90,7 +90,7 @@ static alist *reload_table = NULL;
 
 /* Globals Exported */
 DirectorResource *me = NULL;                    /* Our Global resource */
-ConfigurationParser *my_config = NULL;             /* Our Global config */
+ConfigurationParser *my_config = nullptr;             /* Our Global config */
 char *configfile = NULL;
 void *start_heap;
 

@@ -4399,8 +4399,8 @@ ConfigurationParser *InitDirConfig(const char *configfile, int exit_code)
 {
    return new ConfigurationParser (
                 configfile,
-                NULL,
-                NULL,
+                nullptr,
+                nullptr,
                 InitResourceCb,
                 ParseConfigCb,
                 PrintConfigCb,

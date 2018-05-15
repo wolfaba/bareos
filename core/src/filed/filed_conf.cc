@@ -607,11 +607,11 @@ ConfigurationParser *InitFdConfig(const char *configfile, int exit_code)
 {
    return new ConfigurationParser (
                 configfile,
-                NULL,
-                NULL,
+                nullptr,
+                nullptr,
                 InitResourceCb,
                 ParseConfigCb,
-                NULL,
+                nullptr,
                 exit_code,
                 (void *)&res_all,
                 res_all_size,
@@ -621,11 +621,6 @@ ConfigurationParser *InitFdConfig(const char *configfile, int exit_code)
                 res_head, 
                 CONFIG_FILE, 
                 "bareos-fd.d");
-}
-
-bool ParseFdConfig(ConfigurationParser *config, const char *configfile, int exit_code)
-{
-   return config->ParseConfig();
 }
 
 /**

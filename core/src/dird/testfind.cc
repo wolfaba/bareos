@@ -50,7 +50,7 @@ static int trunc_path = 0;
 static int attrs = 0;
 
 DirectorResource *me = NULL;                    /* Our Global resource */
-ConfigurationParser *my_config = NULL;             /* Our Global config */
+ConfigurationParser *my_config = nullptr;             /* Our Global config */
 
 static JobControlRecord *jcr;
 

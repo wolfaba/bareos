@@ -68,7 +68,7 @@ static const char *backend_directory = _PATH_BAREOS_BACKENDDIR;
 #endif
 
 DirectorResource *me = NULL;                    /* Our Global resource */
-ConfigurationParser *my_config = NULL;             /* Our Global config */
+ConfigurationParser *my_config = nullptr;             /* Our Global config */
 
 #define MAX_ID_LIST_LEN 10000000
 
