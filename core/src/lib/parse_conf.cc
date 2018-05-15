@@ -167,39 +167,6 @@ ConfigurationParser::~ConfigurationParser() {
    }
 }
 
-void ConfigurationParser::init(const char *cf,
-                  LEX_ERROR_HANDLER *ScanError,
-                  LEX_WARNING_HANDLER *scan_warning,
-                  INIT_RES_HANDLER *init_res,
-                  STORE_RES_HANDLER *StoreRes,
-                  PRINT_RES_HANDLER *print_res,
-                  int32_t err_type,
-                  void *vres_all,
-                  int32_t res_all_size,
-                  int32_t r_first,
-                  int32_t r_last,
-                  ResourceTable *resources,
-                  CommonResourceHeader **res_head)
-{
-/*   cf_ = cf;
-   use_config_include_dir_ = false;
-   config_include_dir_ = NULL;
-   config_include_naming_format_ = "%s/%s/%s.conf";
-   used_config_path_ = NULL;
-   scan_error_ = ScanError;
-   scan_warning_ = scan_warning;
-   init_res_ = init_res;
-   store_res_ = StoreRes;*/
-//   print_res_ = print_res;
-   err_type_ = err_type;
-/*   res_all_ = vres_all;
-   res_all_size_ = res_all_size;
-   r_first_ = r_first;
-   r_last_ = r_last;
-   resources_ = resources;
-   res_head_ = res_head;*/
-}
-
 bool ConfigurationParser::ParseConfig()
 {
    static bool first = true;
@@ -218,11 +185,11 @@ bool ConfigurationParser::ParseConfig()
    }
    used_config_path_ = bstrdup(config_path.c_str());
    Dmsg1(100, "config file = %s\n", used_config_path_);
-   return ParseConfigFile(config_path.c_str(), NULL, scan_error_, scan_warning_, err_type_);
+   return ParseConfigFile(config_path.c_str(), NULL, scan_error_, scan_warning_);
 }
 
 bool ConfigurationParser::ParseConfigFile(const char *cf, void *caller_ctx, LEX_ERROR_HANDLER *ScanError,
-                               LEX_WARNING_HANDLER *scan_warning, int32_t err_type)
+                               LEX_WARNING_HANDLER *scan_warning)
 {
    bool result = true;
    LEX *lc = NULL;
@@ -262,14 +229,14 @@ bool ConfigurationParser::ParseConfigFile(const char *cf, void *caller_ctx, LEX_
             LexSetDefaultWarningHandler(lc);
          }
 
-         LexSetErrorHandlerErrorType(lc, err_type) ;
+         LexSetErrorHandlerErrorType(lc, err_type_) ;
          scan_err2(lc, _("Cannot open config file \"%s\": %s\n"),
             cf, be.bstrerror());
          free(lc);
 
          return false;
       }
-      LexSetErrorHandlerErrorType(lc, err_type);
+      LexSetErrorHandlerErrorType(lc, err_type_);
       lc->error_counter = 0;
       lc->caller_ctx = caller_ctx;
 

@@ -433,27 +433,10 @@ public:
    
    ~ConfigurationParser();
 
-   void init(const char *cf,
-                  LEX_ERROR_HANDLER *ScanError,
-                  LEX_WARNING_HANDLER *scan_warning,
-                  INIT_RES_HANDLER *init_res,
-                  STORE_RES_HANDLER *StoreRes,
-                  PRINT_RES_HANDLER *print_res,
-                  int32_t err_type,
-                  void *vres_all,
-                  int32_t res_all_size,
-                  int32_t r_first,
-                  int32_t r_last,
-                  ResourceTable *resources,
-                  CommonResourceHeader **res_head);
-                  
-   void SetDefaultConfigFilename(const char *filename);
-   void SetConfigIncludeDir(const char* rel_path);                  
-   
    bool IsUsingConfigIncludeDir() { return use_config_include_dir_; }
    bool ParseConfig();
    bool ParseConfigFile(const char *cf, void *caller_ctx, LEX_ERROR_HANDLER *ScanError = NULL,
-                          LEX_WARNING_HANDLER *scan_warning = NULL, int32_t err_type = M_ERROR_TERM);
+                          LEX_WARNING_HANDLER *scan_warning = NULL);
    const char *get_base_config_path() { return used_config_path_; }
    void FreeResources();
    CommonResourceHeader **save_resources();
