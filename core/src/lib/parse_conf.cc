@@ -113,7 +113,7 @@ ConfigurationParser::ConfigurationParser(
                   int32_t r_last,
                   ResourceTable *resources,
                   CommonResourceHeader **res_head,
-                  const char* config_default_filename, 
+                  const char* config_default_filename,
                   const char* config_include_dir)
    : ConfigurationParser()
 {

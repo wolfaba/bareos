@@ -427,10 +427,10 @@ public:
                   int32_t r_first,
                   int32_t r_last,
                   ResourceTable *resources,
-                  CommonResourceHeader **res_head, 
-                  const char* config_default_filename, 
+                  CommonResourceHeader **res_head,
+                  const char* config_default_filename,
                   const char* config_include_dir);
-   
+
    ~ConfigurationParser();
 
    bool IsUsingConfigIncludeDir() { return use_config_include_dir_; }

@@ -594,7 +594,7 @@ bool do_reload_config()
    prev_config.JobCount = 0;
 
    Dmsg0(100, "Reloading config file\n");
-   
+
    my_config->err_type_ = M_ERROR;
    bool ok = my_config->ParseConfig();
 

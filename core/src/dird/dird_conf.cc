@@ -4410,7 +4410,7 @@ ConfigurationParser *InitDirConfig(const char *configfile, int exit_code)
                 R_FIRST,
                 R_LAST,
                 resources,
-                res_head, 
-                CONFIG_FILE, 
+                res_head,
+                CONFIG_FILE,
                 "bareos-dir.d");
 }
