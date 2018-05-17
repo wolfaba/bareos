@@ -374,12 +374,6 @@ ConfigurationParser *InitConsConfig(const char *configfile, int exit_code)
                 "bconsole.d");
 }
 
-bool ParseConsConfig(const char *configfile, int exit_code)
-{
-   my_config = InitConsConfig(configfile, exit_code);
-   return my_config->ParseConfig();
-}
-
 /**
  * Print configuration file schema in json format
  */

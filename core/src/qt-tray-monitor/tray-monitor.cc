@@ -194,7 +194,6 @@ int main(int argc, char *argv[])
       PoolMem buffer;
 
       my_config = InitTmonConfig(cl.configfile, M_ERROR_TERM);
-      my_config->ParseConfig();
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       fflush(stdout);

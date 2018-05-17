@@ -133,8 +133,8 @@ main (int argc, char *const *argv)
    argc -= optind;
    argv += optind;
 
-   my_config = new_config_parser();
-   ParseDirConfig(configfile, M_ERROR_TERM);
+   my_config = InitDirConfig(configfile, M_ERROR_TERM);
+   my_config->ParseConfig();
 
    MessagesResource *msg;
 

@@ -225,8 +225,7 @@ int main (int argc, char *argv[])
    if (export_config_schema) {
       PoolMem buffer;
 
-      my_config = new ConfigurationParser;
-      InitFdConfig(configfile, M_ERROR_TERM);
+      my_config = InitFdConfig(configfile, M_ERROR_TERM);
       PrintConfigSchemaJson(buffer);
       printf("%s\n", buffer.c_str());
       goto bail_out;
