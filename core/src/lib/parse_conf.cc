@@ -117,7 +117,7 @@ ConfigurationParser::ConfigurationParser(
                   const char* config_include_dir)
    : ConfigurationParser()
 {
-   cf_ = cf;
+   cf_ = cf == nullptr ? "" : cf;
    use_config_include_dir_ = false;
    config_include_naming_format_ = "%s/%s/%s.conf";
    scan_error_ = ScanError;
@@ -132,8 +132,8 @@ ConfigurationParser::ConfigurationParser(
    r_last_ = r_last;
    resources_ = resources;
    res_head_ = res_head;
-   config_default_filename_ = config_default_filename;
-   config_include_dir_ = config_include_dir;
+   config_default_filename_ = config_default_filename == nullptr ? "" : config_default_filename;
+   config_include_dir_ = config_include_dir == nullptr ? "" : config_include_dir;
 }
 
 ConfigurationParser::~ConfigurationParser() {
