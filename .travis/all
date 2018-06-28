@@ -36,9 +36,11 @@ echo
 echo "------ trigger backup job -----"
 echo -e "run job=backup-bareos-fd yes\rwait" | bconsole | grep "Job queued. JobId="
 echo "status dir" | bconsole
+echo "messages" | bconsole
 echo
 echo "------ trigger restore job -----"
 echo -e "restore select current\r2\rls\rmark usr\rdone\ryes\rwait" | bconsole
 echo "status dir" | bconsole
+echo "messages" | bconsole
 grep "bareos restore test" /tmp/bareos-restores/${BACKUP_TEST_FILE}
 
