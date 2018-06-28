@@ -117,7 +117,7 @@ bool AcquireDeviceForRead(DeviceControlRecord *dcr)
     */
    Dmsg2(rdebuglevel, "MediaType dcr=%s dev=%s\n", dcr->media_type, dev->device->media_type);
    if (dcr->media_type[0] && !bstrcmp(dcr->media_type, dev->device->media_type)) {
-      ReserveContext rctx;
+      ReserveContext reserve_context;
       DirectorStorage *store;
       int status;
 
@@ -131,12 +131,12 @@ bool AcquireDeviceForRead(DeviceControlRecord *dcr)
       dev->dunblock(DEV_UNLOCKED);
 
       LockReservations();
-      memset(&rctx, 0, sizeof(ReserveContext));
-      rctx.jcr = jcr;
+      memset(&reserve_context, 0, sizeof(ReserveContext));
+      reserve_context.jcr = jcr;
       jcr->read_dcr = dcr;
       jcr->reserve_msgs = New(alist(10, not_owned_by_alist));
-      rctx.any_drive = true;
-      rctx.device_name = vol->device;
+      reserve_context.any_drive = true;
+      reserve_context.device_name = vol->device;
       store = new DirectorStorage;
       memset(store, 0, sizeof(DirectorStorage));
       store->name[0] = 0; /* No dir name */
@@ -144,13 +144,13 @@ bool AcquireDeviceForRead(DeviceControlRecord *dcr)
       bstrncpy(store->pool_name, dcr->pool_name, sizeof(store->pool_name));
       bstrncpy(store->pool_type, dcr->pool_type, sizeof(store->pool_type));
       store->append = false;
-      rctx.store = store;
+      reserve_context.store = store;
       CleanDevice(dcr);                     /* clean up the dcr */
 
       /*
        * Search for a new device
        */
-      status = SearchResForDevice(rctx);
+      status = SearchResForDevice(reserve_context);
       ReleaseReserveMessages(jcr);         /* release queued messages */
       UnlockReservations();
 

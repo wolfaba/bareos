@@ -46,9 +46,7 @@ public:
    char pool_type[MAX_NAME_LENGTH];
 };
 
-/* Reserve context */
-class ReserveContext {
-public:
+struct ReserveContext {
    JobControlRecord *jcr;
    char *device_name;
    DirectorStorage *store;
@@ -77,8 +75,8 @@ DLL_IMP_EXP void _unLockVolumes();
 DLL_IMP_EXP void _lockReadVolumes(const char *file = "**Unknown**", int line = 0);
 DLL_IMP_EXP void _unLockReadVolumes();
 DLL_IMP_EXP void UnreserveDevice(DeviceControlRecord *dcr);
-DLL_IMP_EXP bool FindSuitableDeviceForJob(JobControlRecord *jcr, ReserveContext &rctx);
-DLL_IMP_EXP int SearchResForDevice(ReserveContext &rctx);
+DLL_IMP_EXP bool FindSuitableDeviceForJob(JobControlRecord *jcr, ReserveContext &reserve_context);
+DLL_IMP_EXP int SearchResForDevice(ReserveContext &reserve_context);
 DLL_IMP_EXP void ReleaseReserveMessages(JobControlRecord *jcr);
 
 #ifdef SD_DEBUG_LOCK
