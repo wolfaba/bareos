@@ -36,8 +36,7 @@
  *      the media and pool info in the JobControlRecord.  This class is used
  *      only temporarily in this file.
  */
-class DirectorStorage {
-public:
+struct DirectorStorage {
    alist *device;
    bool append;
    char name[MAX_NAME_LENGTH];
@@ -65,6 +64,33 @@ struct ReserveContext {
    char VolumeName[MAX_NAME_LENGTH];  /**< Vol name suggested by DIR */
 };
 
+#include <regex>
+class StorageDefinitionMessage
+{
+public:
+   StorageDefinitionMessage();
+   bool ParseMessage(std::string str);
+
+   std::string StoreName, media_type, pool_name, pool_type;
+   uint32_t append, Copy, Stripe;
+   bool is_valid;
+
+private:
+   const std::regex regex;
+};
+
+class UseDeviceMessage
+{
+public:
+   UseDeviceMessage();
+   bool ParseMessage(std::string str);
+
+   std::string dev_name;
+   bool is_valid;
+
+private:
+   const std::regex regex;
+};
 
 DLL_IMP_EXP void InitReservationsLock();
 DLL_IMP_EXP void TermReservationsLock();
