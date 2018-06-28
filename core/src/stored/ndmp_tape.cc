@@ -375,11 +375,11 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
                                               uint32_t *data_length)
 {
    DeviceControlRecord *dcr = jcr->read_dcr;
-   READ_CTX *rctx = jcr->rctx;
+   ReadContext *read_context = jcr->read_context;
    bool done = false;
    bool ok = true;
 
-   if (!rctx) {
+   if (!read_context) {
       return false;
    }
 
@@ -387,8 +387,8 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
       /*
        * See if there are any records left to process.
        */
-      if (!IsBlockEmpty(rctx->rec)) {
-         if (!ReadNextRecordFromBlock(dcr, rctx, &done)) {
+      if (!IsBlockEmpty(read_context->rec)) {
+         if (!ReadNextRecordFromBlock(dcr, read_context, &done)) {
             /*
              * When the done flag is set to true we are done reading all
              * records or end of block read next block.
@@ -399,7 +399,7 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
          /*
           * Read the next block into our buffers.
           */
-         if (!ReadNextBlockFromDevice(dcr, &rctx->sessrec,
+         if (!ReadNextBlockFromDevice(dcr, &read_context->sessrec,
                                           NULL, MountNextReadVolume, &ok)) {
             return false;
          }
@@ -407,17 +407,17 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
          /*
           * Get a new record for each Job as defined by VolSessionId and VolSessionTime
           */
-         if (!rctx->rec ||
-              rctx->rec->VolSessionId != dcr->block->VolSessionId ||
-              rctx->rec->VolSessionTime != dcr->block->VolSessionTime) {
-            ReadContextSetRecord(dcr, rctx);
+         if (!read_context->rec ||
+              read_context->rec->VolSessionId != dcr->block->VolSessionId ||
+              read_context->rec->VolSessionTime != dcr->block->VolSessionTime) {
+            ReadContextSetRecord(dcr, read_context);
          }
 
-         rctx->records_processed = 0;
-         ClearAllBits(REC_STATE_MAX, rctx->rec->state_bits);
-         rctx->lastFileIndex = READ_NO_FILEINDEX;
+         read_context->records_processed = 0;
+         ClearAllBits(REC_STATE_MAX, read_context->rec->state_bits);
+         read_context->lastFileIndex = READ_NO_FILEINDEX;
 
-         if (!ReadNextRecordFromBlock(dcr, rctx, &done)) {
+         if (!ReadNextRecordFromBlock(dcr, read_context, &done)) {
             /*
              * When the done flag is set to true we are done reading all
              * records or end of block read next block.
@@ -429,7 +429,7 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
       /*
        * See if we are processing some sort of label?
        */
-      if (rctx->rec->FileIndex < 0) {
+      if (read_context->rec->FileIndex < 0) {
          continue;
       }
 
@@ -446,23 +446,23 @@ static inline bool bndmp_read_data_from_block(JobControlRecord *jcr,
        *
        * anything other means a corrupted stream of records and means we give an EOF.
        */
-      switch (rctx->rec->maskedStream) {
+      switch (read_context->rec->maskedStream) {
       case STREAM_UNIX_ATTRIBUTES:
          continue;
       case STREAM_FILE_DATA:
-         if (wanted_data_length < rctx->rec->data_len) {
+         if (wanted_data_length < read_context->rec->data_len) {
             Jmsg0(jcr, M_FATAL, 0,
                   _("Data read from volume bigger then NDMP databuffer, please increase the NDMP blocksize.\n"));
             return false;
          }
-         memcpy(data, rctx->rec->data, rctx->rec->data_len);
-         *data_length = rctx->rec->data_len;
+         memcpy(data, read_context->rec->data, read_context->rec->data_len);
+         *data_length = read_context->rec->data_len;
          return true;
       case STREAM_NDMP_SEPARATOR:
          *data_length = 0;
          return true;
       default:
-         Jmsg1(jcr, M_ERROR, 0, _("Encountered an unknown stream type %d\n"), rctx->rec->maskedStream);
+         Jmsg1(jcr, M_ERROR, 0, _("Encountered an unknown stream type %d\n"), read_context->rec->maskedStream);
          *data_length = 0;
          return true;
       }
@@ -734,7 +734,7 @@ extern "C" ndmp9_error bndmp_tape_open(struct ndm_session *sess,
       }
    } else {
       bool ok = true;
-      READ_CTX *rctx;
+      ReadContext *read_context;
 
       /*
        * Setup internal system for reading data (if not done before).
@@ -782,13 +782,13 @@ extern "C" ndmp9_error bndmp_tape_open(struct ndm_session *sess,
          /*
           * Allocate a new read context for this Job.
           */
-         rctx = new_read_context();
-         jcr->rctx = rctx;
+         read_context = new_read_context();
+         jcr->read_context = read_context;
 
          /*
           * Read the first block and setup record processing.
           */
-         if (!ReadNextBlockFromDevice(dcr, &rctx->sessrec,
+         if (!ReadNextBlockFromDevice(dcr, &read_context->sessrec,
                                           NULL, MountNextReadVolume, &ok)) {
             Jmsg1(jcr, M_FATAL, 0,
                   _("Read session label failed. ERR=%s\n"),
@@ -796,10 +796,10 @@ extern "C" ndmp9_error bndmp_tape_open(struct ndm_session *sess,
             goto bail_out;
          }
 
-         ReadContextSetRecord(dcr, rctx);
-         rctx->records_processed = 0;
-         ClearAllBits(REC_STATE_MAX, rctx->rec->state_bits);
-         rctx->lastFileIndex = READ_NO_FILEINDEX;
+         ReadContextSetRecord(dcr, read_context);
+         read_context->records_processed = 0;
+         ClearAllBits(REC_STATE_MAX, read_context->rec->state_bits);
+         read_context->lastFileIndex = READ_NO_FILEINDEX;
       }
    }
 
@@ -1138,9 +1138,9 @@ void EndOfNdmpBackup(JobControlRecord *jcr)
 
 void EndOfNdmpRestore(JobControlRecord *jcr)
 {
-   if (jcr->rctx) {
-      FreeReadContext(jcr->rctx);
-      jcr->rctx = NULL;
+   if (jcr->read_context) {
+      FreeReadContext(jcr->read_context);
+      jcr->read_context = NULL;
    }
 
    if (jcr->acquired_storage) {

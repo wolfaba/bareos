@@ -595,7 +595,7 @@ public:
    /*
     * Parameters for Open Read Session
     */
-   READ_CTX *rctx;                        /**< Read context used to keep track of what is processed or not */
+   ReadContext *read_context;                        /**< Read context used to keep track of what is processed or not */
    BootStrapRecord *bsr;                              /**< Bootstrap record -- has everything */
    bool mount_next_volume;                /**< Set to cause next volume mount */
    uint32_t read_VolSessionId;

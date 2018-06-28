@@ -509,9 +509,9 @@ void StoredFreeJcr(JobControlRecord *jcr)
       jcr->bsr = NULL;
    }
 
-   if (jcr->rctx) {
-      FreeReadContext(jcr->rctx);
-      jcr->rctx = NULL;
+   if (jcr->read_context) {
+      FreeReadContext(jcr->read_context);
+      jcr->read_context = NULL;
    }
 
    if (jcr->compress.deflate_buffer || jcr->compress.inflate_buffer) {

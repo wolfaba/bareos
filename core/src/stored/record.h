@@ -242,17 +242,13 @@ typedef struct Session_Label SESSION_LABEL;
 
 #define SERIAL_BUFSIZE 1024           /**< Volume serialisation buffer size */
 
-/**
- * Read context used to keep track of what is processed or not.
- */
-struct Read_Context {
-   DeviceRecord *rec;                   /**< Record currently being processed */
+typedef struct ReadContext {
+   DeviceRecord *rec;                 /**< Record currently being processed */
    dlist *recs;                       /**< Linked list of record packets open */
    SESSION_LABEL sessrec;             /**< Start Of Session record info */
    uint32_t records_processed;        /**< Number of records processed from this block */
    int32_t lastFileIndex;             /**< Last File Index processed */
 };
-typedef struct Read_Context READ_CTX;
 
 struct DelayedDataStream {
    int32_t stream;                     /**< stream less new bits */

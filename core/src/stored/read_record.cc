@@ -115,36 +115,36 @@ static char *rec_state_bits_to_str(DeviceRecord *rec)
 /**
  * Allocate a new read context which will contains accumulated data from a read session.
  */
-READ_CTX *new_read_context(void)
+ReadContext *new_read_context(void)
 {
    DeviceRecord *rec = NULL;
-   READ_CTX *rctx;
+   ReadContext *read_context;
 
-   rctx = (READ_CTX *)malloc(sizeof(READ_CTX));
-   memset(rctx, 0, sizeof(READ_CTX));
+   read_context = (ReadContext *)malloc(sizeof(ReadContext));
+   memset(read_context, 0, sizeof(ReadContext));
 
-   rctx->recs = New(dlist(rec, &rec->link));
-   return rctx;
+   read_context->recs = New(dlist(rec, &rec->link));
+   return read_context;
 }
 
 /**
  * Free a read context which contains accumulated data from a read session.
  */
-void FreeReadContext(READ_CTX *rctx)
+void FreeReadContext(ReadContext *read_context)
 {
    DeviceRecord *rec;
 
    /*
     * Walk down list and free all remaining allocated recs
     */
-   while (!rctx->recs->empty()) {
-      rec = (DeviceRecord *)rctx->recs->first();
-      rctx->recs->remove(rec);
+   while (!read_context->recs->empty()) {
+      rec = (DeviceRecord *)read_context->recs->first();
+      read_context->recs->remove(rec);
       FreeRecord(rec);
    }
-   delete rctx->recs;
+   delete read_context->recs;
 
-   free(rctx);
+   free(read_context);
 }
 
 /**
@@ -152,12 +152,12 @@ void FreeReadContext(READ_CTX *rctx)
  * Reuse an already existing record when available in the linked
  * list or allocate a fresh one and prepend it in the linked list.
  */
-void ReadContextSetRecord(DeviceControlRecord *dcr, READ_CTX *rctx)
+void ReadContextSetRecord(DeviceControlRecord *dcr, ReadContext *read_context)
 {
    DeviceRecord *rec;
    bool found = false;
 
-   foreach_dlist(rec, rctx->recs) {
+   foreach_dlist(rec, read_context->recs) {
       if (rec->VolSessionId == dcr->block->VolSessionId &&
           rec->VolSessionTime == dcr->block->VolSessionTime) {
          found = true;
@@ -167,14 +167,14 @@ void ReadContextSetRecord(DeviceControlRecord *dcr, READ_CTX *rctx)
 
    if (!found) {
       rec = new_record();
-      rctx->recs->prepend(rec);
+      read_context->recs->prepend(rec);
       Dmsg3(debuglevel, "New record for state=%s SI=%d ST=%d\n",
             rec_state_bits_to_str(rec),
             dcr->block->VolSessionId,
             dcr->block->VolSessionTime);
    }
 
-   rctx->rec = rec;
+   read_context->rec = rec;
 }
 
 /**
@@ -279,12 +279,12 @@ bool ReadNextBlockFromDevice(DeviceControlRecord *dcr,
  *
  * When we are done processing all records the done bool is set to true.
  */
-bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, READ_CTX *rctx, bool *done)
+bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, ReadContext *read_context, bool *done)
 {
    JobControlRecord *jcr = dcr->jcr;
    Device *dev = dcr->dev;
    DeviceBlock *block = dcr->block;
-   DeviceRecord *rec = rctx->rec;
+   DeviceRecord *rec = read_context->rec;
 
    while (1) {
       if (!ReadRecordFromBlock(dcr, rec)) {
@@ -303,9 +303,9 @@ bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, READ_CTX *rctx, bool *don
        *  before accessing the record, we may need to read again to
        *  get all the data.
        */
-      rctx->records_processed++;
+      read_context->records_processed++;
       Dmsg6(debuglevel, "recno=%d state_bits=%s blk=%d SI=%d ST=%d FI=%d\n",
-            rctx->records_processed, rec_state_bits_to_str(rec), block->BlockNumber,
+            read_context->records_processed, rec_state_bits_to_str(rec), block->BlockNumber,
             rec->VolSessionId, rec->VolSessionTime, rec->FileIndex);
 
       if (rec->FileIndex == EOM_LABEL) {     /* end of tape? */
@@ -317,7 +317,7 @@ bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, READ_CTX *rctx, bool *don
        * Some sort of label?
        */
       if (rec->FileIndex < 0) {
-         HandleSessionRecord(dcr->dev, rec, &rctx->sessrec);
+         HandleSessionRecord(dcr->dev, rec, &read_context->sessrec);
          if (jcr->bsr) {
             /*
              * We just check block FI and FT not FileIndex
@@ -334,7 +334,7 @@ bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, READ_CTX *rctx, bool *don
        * Apply BootStrapRecord filter
        */
       if (jcr->bsr) {
-         rec->match_stat = MatchBsr(jcr->bsr, rec, &dev->VolHdr, &rctx->sessrec, jcr);
+         rec->match_stat = MatchBsr(jcr->bsr, rec, &dev->VolHdr, &read_context->sessrec, jcr);
          if (rec->match_stat == -1) {        /* no more possible matches */
             *done = true;                    /* all items found, stop */
             Dmsg2(debuglevel, "All done=(file:block) %u:%u\n", dev->file, dev->block_num);
@@ -355,21 +355,21 @@ bool ReadNextRecordFromBlock(DeviceControlRecord *dcr, READ_CTX *rctx, bool *don
 
       if (IsPartialRecord(rec)) {
          Dmsg6(debuglevel, "Partial, break. recno=%d state_bits=%s blk=%d SI=%d ST=%d FI=%d\n",
-               rctx->records_processed, rec_state_bits_to_str(rec), block->BlockNumber, rec->VolSessionId,
+               read_context->records_processed, rec_state_bits_to_str(rec), block->BlockNumber, rec->VolSessionId,
                rec->VolSessionTime, rec->FileIndex);
          return false;                       /* read second part of record */
       }
 
-      if (rctx->lastFileIndex != READ_NO_FILEINDEX && rctx->lastFileIndex != rec->FileIndex) {
+      if (read_context->lastFileIndex != READ_NO_FILEINDEX && read_context->lastFileIndex != rec->FileIndex) {
          if (IsThisBsrDone(jcr->bsr, rec) && TryDeviceRepositioning(jcr, rec, dcr)) {
             Dmsg2(debuglevel, "This bsr done, break pos %u:%u\n", dev->file, dev->block_num);
             return false;
          }
-         Dmsg2(debuglevel, "==== inside LastIndex=%d FileIndex=%d\n", rctx->lastFileIndex, rec->FileIndex);
+         Dmsg2(debuglevel, "==== inside LastIndex=%d FileIndex=%d\n", read_context->lastFileIndex, rec->FileIndex);
       }
 
-      Dmsg2(debuglevel, "==== LastIndex=%d FileIndex=%d\n", rctx->lastFileIndex, rec->FileIndex);
-      rctx->lastFileIndex = rec->FileIndex;
+      Dmsg2(debuglevel, "==== LastIndex=%d FileIndex=%d\n", read_context->lastFileIndex, rec->FileIndex);
+      read_context->lastFileIndex = rec->FileIndex;
 
       return true;
    }
@@ -386,11 +386,11 @@ bool ReadRecords(DeviceControlRecord *dcr,
                   bool mount_cb(DeviceControlRecord *dcr))
 {
    JobControlRecord *jcr = dcr->jcr;
-   READ_CTX *rctx;
+   ReadContext *read_context;
    bool ok = true;
    bool done = false;
 
-   rctx = new_read_context();
+   read_context = new_read_context();
    position_device_to_first_file(jcr, dcr);
    jcr->mount_next_volume = false;
 
@@ -403,7 +403,7 @@ bool ReadRecords(DeviceControlRecord *dcr,
       /*
        * Read the next block into our buffers.
        */
-      if (!ReadNextBlockFromDevice(dcr, &rctx->sessrec, RecordCb, mount_cb, &ok)) {
+      if (!ReadNextBlockFromDevice(dcr, &read_context->sessrec, RecordCb, mount_cb, &ok)) {
          break;
       }
 
@@ -412,7 +412,7 @@ bool ReadRecords(DeviceControlRecord *dcr,
        * This does not stop when file/block are too big
        */
       if (!MatchBsrBlock(jcr->bsr, block)) {
-         if (TryDeviceRepositioning(jcr, rctx->rec, dcr)) {
+         if (TryDeviceRepositioning(jcr, read_context->rec, dcr)) {
             break;                    /* get next volume */
          }
          continue;                    /* skip this record */
@@ -422,46 +422,46 @@ bool ReadRecords(DeviceControlRecord *dcr,
       /*
        * Get a new record for each Job as defined by VolSessionId and VolSessionTime
        */
-      if (!rctx->rec ||
-          rctx->rec->VolSessionId != dcr->block->VolSessionId ||
-          rctx->rec->VolSessionTime != dcr->block->VolSessionTime) {
-         ReadContextSetRecord(dcr, rctx);
+      if (!read_context->rec ||
+          read_context->rec->VolSessionId != dcr->block->VolSessionId ||
+          read_context->rec->VolSessionTime != dcr->block->VolSessionTime) {
+         ReadContextSetRecord(dcr, read_context);
       }
 
       Dmsg3(debuglevel, "Before read rec loop. stat=%s blk=%d rem=%d\n",
-            rec_state_bits_to_str(rctx->rec), dcr->block->BlockNumber, rctx->rec->remainder);
+            rec_state_bits_to_str(read_context->rec), dcr->block->BlockNumber, read_context->rec->remainder);
 
-      rctx->records_processed = 0;
-      ClearAllBits(REC_STATE_MAX, rctx->rec->state_bits);
-      rctx->lastFileIndex = READ_NO_FILEINDEX;
-      Dmsg1(debuglevel, "Block %s empty\n", IsBlockEmpty(rctx->rec) ? "is" : "NOT");
+      read_context->records_processed = 0;
+      ClearAllBits(REC_STATE_MAX, read_context->rec->state_bits);
+      read_context->lastFileIndex = READ_NO_FILEINDEX;
+      Dmsg1(debuglevel, "Block %s empty\n", IsBlockEmpty(read_context->rec) ? "is" : "NOT");
 
       /*
        * Process the block and read all records in the block and send
        * them to the defined callback.
        */
-      while (ok && !IsBlockEmpty(rctx->rec)) {
-         if (!ReadNextRecordFromBlock(dcr, rctx, &done)) {
+      while (ok && !IsBlockEmpty(read_context->rec)) {
+         if (!ReadNextRecordFromBlock(dcr, read_context, &done)) {
             break;
          }
 
-         if (rctx->rec->FileIndex < 0) {
+         if (read_context->rec->FileIndex < 0) {
             /*
              * Note, we pass *all* labels to the callback routine. If
              *  he wants to know if they matched the bsr, then he must
              *  check the match_stat in the record */
-            ok = RecordCb(dcr, rctx->rec);
+            ok = RecordCb(dcr, read_context->rec);
          } else {
             DeviceRecord *rec;
 
             Dmsg6(debuglevel, "OK callback. recno=%d state_bits=%s blk=%d SI=%d ST=%d FI=%d\n",
-                  rctx->records_processed, rec_state_bits_to_str(rctx->rec), dcr->block->BlockNumber,
-                  rctx->rec->VolSessionId, rctx->rec->VolSessionTime, rctx->rec->FileIndex);
+                  read_context->records_processed, rec_state_bits_to_str(read_context->rec), dcr->block->BlockNumber,
+                  read_context->rec->VolSessionId, read_context->rec->VolSessionTime, read_context->rec->FileIndex);
 
             /*
              * Perform record translations.
              */
-            dcr->before_rec = rctx->rec;
+            dcr->before_rec = read_context->rec;
             dcr->after_rec = NULL;
 
             /*
@@ -515,7 +515,7 @@ bool ReadRecords(DeviceControlRecord *dcr,
    }
 // Dmsg2(debuglevel, "Position=(file:block) %u:%u\n", dcr->dev->file, dcr->dev->block_num);
 
-   FreeReadContext(rctx);
+   FreeReadContext(read_context);
    PrintBlockReadErrors(jcr, dcr->block);
 
    return ok;
