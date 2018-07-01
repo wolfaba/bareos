@@ -305,14 +305,14 @@ bool UseDeviceReserve(JobControlRecord *jcr)
 }
 
 StorageDefinitionMessage::StorageDefinitionMessage()
-   : is_valid(false)
+   : is_valid_(false)
 {
    return;
 }
 
 bool StorageDefinitionMessage::ParseMessage(const char *msg_in)
 {
-   is_valid = false;
+   is_valid_ = false;
    bool conversion_ok = false;
 
    char msg[600]; /* do not alter original message */
@@ -324,29 +324,33 @@ bool StorageDefinitionMessage::ParseMessage(const char *msg_in)
          "pool_name=%127s pool_type=%127s append=%d copy=%d stripe=%d\n";
 
    char sn[128], mt[128], pn[128], pt[128];
+   int ap, cp, st;
    conversion_ok = sscanf(msg, use_storage,
-               sn, mt, pn, pt, &append, &Copy, &Stripe) == 7;
+               sn, mt, pn, pt, &ap, &cp, &st) == 7;
 
    if (conversion_ok) {
-      StoreName = sn;
-      media_type = mt;
-      pool_name = pn;
-      pool_type = pt;
+      store_name_ = sn;
+      media_type_ = mt;
+      pool_name_ = pn;
+      pool_type_ = pt;
+      append_ = ap == 0 ? false : true;
+      copy_ = cp == 0 ? false : true;
+      stripe_ = st == 0 ? false : true;
    }
 
-   is_valid = conversion_ok;
+   is_valid_ = conversion_ok;
    return conversion_ok;
 }
 
 UseDeviceMessage::UseDeviceMessage()
-   : is_valid(false)
+   : is_valid_(false)
 {
    return;
 }
 
 bool UseDeviceMessage::ParseMessage(const char *msg_in)
 {
-   is_valid = false;
+   is_valid_ = false;
    bool conversion_ok = false;
 
    char msg[200]; /* do not alter original message */
@@ -358,10 +362,10 @@ bool UseDeviceMessage::ParseMessage(const char *msg_in)
    conversion_ok = sscanf(msg, use_device, dn) == 1;
 
    if (conversion_ok) {
-      dev_name = dn;
+      dev_name_ = dn;
    }
 
-   is_valid = conversion_ok;
+   is_valid_ = conversion_ok;
    return conversion_ok;
 }
 
@@ -396,7 +400,7 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
       if (!ok) {
          break;
       }
-      if (storage_definition_message.append) {
+      if (storage_definition_message.Append()) {
          jcr->write_store = dirstore;
       } else {
          jcr->read_store = dirstore;
@@ -405,11 +409,11 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
       dirstore->append(store);
       memset(store, 0, sizeof(DirectorStorage));
       store->device = New(alist(10));
-      bstrncpy(store->name, storage_definition_message.StoreName.c_str(), sizeof(store->name));
-      bstrncpy(store->media_type, storage_definition_message.media_type.c_str(), sizeof(store->media_type));
-      bstrncpy(store->pool_name, storage_definition_message.pool_name.c_str(), sizeof(store->pool_name));
-      bstrncpy(store->pool_type, storage_definition_message.pool_type.c_str(), sizeof(store->pool_type));
-      store->append = storage_definition_message.append;
+      bstrncpy(store->name, storage_definition_message.StoreName(), sizeof(store->name));
+      bstrncpy(store->media_type, storage_definition_message.MediaType(), sizeof(store->media_type));
+      bstrncpy(store->pool_name, storage_definition_message.PoolName(), sizeof(store->pool_name));
+      bstrncpy(store->pool_type, storage_definition_message.PoolType(), sizeof(store->pool_type));
+      store->append = storage_definition_message.Append();
 
       /*
        * Now get all devices
@@ -420,14 +424,14 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
          if (!ok) {
             break;
          }
-         store->device->append(bstrdup(use_device_message.dev_name.c_str()));
+         store->device->append(bstrdup(use_device_message.DevName()));
       }
    }  while (ok && jcr->dir_bsock->recv() >= 0);
 
    InitJcrDeviceWaitTimers(jcr);
    jcr->dcr = New(StorageDaemonDeviceControlRecord);
    SetupNewDcrDevice(jcr, jcr->dcr, NULL, NULL);
-   if (storage_definition_message.append) {
+   if (storage_definition_message.Append()) {
       jcr->dcr->SetWillWrite();
    }
 
@@ -439,8 +443,8 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
    }
 
    if (ok) {
-      jcr->append = storage_definition_message.append;
-      strcpy(jcr->dev_name, use_device_message.dev_name.c_str());
+      jcr->append = storage_definition_message.Append();
+      strcpy(jcr->dev_name, use_device_message.DevName());
       return true;
    } else {
       UnbashSpaces(jcr->dir_bsock->msg);

@@ -64,16 +64,24 @@ struct ReserveContext {
    char VolumeName[MAX_NAME_LENGTH];  /**< Vol name suggested by DIR */
 };
 
-#include <regex>
 class StorageDefinitionMessage
 {
 public:
    StorageDefinitionMessage();
    bool ParseMessage(const char *msg);
 
-   std::string StoreName, media_type, pool_name, pool_type;
-   unsigned int append, Copy, Stripe;
-   bool is_valid;
+   const char *StoreName() const { return store_name_.c_str(); }
+   const char *MediaType() const { return media_type_.c_str(); }
+   const char *PoolName() const { return pool_name_.c_str(); }
+   const char *PoolType() const { return pool_type_.c_str(); }
+   bool Append() const { return append_; }
+   bool Copy() const { return copy_; }
+   bool Stripe() const { return stripe_; }
+
+private:
+   bool is_valid_;
+   bool append_, copy_, stripe_;
+   std::string store_name_, media_type_, pool_name_, pool_type_;
 };
 
 class UseDeviceMessage
@@ -81,9 +89,11 @@ class UseDeviceMessage
 public:
    UseDeviceMessage();
    bool ParseMessage(const char *msg);
+   const char *DevName() const { return dev_name_.c_str(); }
 
-   std::string dev_name;
-   bool is_valid;
+private:
+   std::string dev_name_;
+   bool is_valid_;
 };
 
 DLL_IMP_EXP void InitReservationsLock();
