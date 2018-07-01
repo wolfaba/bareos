@@ -69,27 +69,21 @@ class StorageDefinitionMessage
 {
 public:
    StorageDefinitionMessage();
-   bool ParseMessage(std::string unbashed_message);
+   bool ParseMessage(const char *msg);
 
    std::string StoreName, media_type, pool_name, pool_type;
-   uint32_t append, Copy, Stripe;
+   unsigned int append, Copy, Stripe;
    bool is_valid;
-
-private:
-   const std::regex regex;
 };
 
 class UseDeviceMessage
 {
 public:
    UseDeviceMessage();
-   bool ParseMessage(std::string unbashed_message);
+   bool ParseMessage(const char *msg);
 
    std::string dev_name;
    bool is_valid;
-
-private:
-   const std::regex regex;
 };
 
 DLL_IMP_EXP void InitReservationsLock();

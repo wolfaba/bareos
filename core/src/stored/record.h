@@ -242,7 +242,7 @@ typedef struct Session_Label SESSION_LABEL;
 
 #define SERIAL_BUFSIZE 1024           /**< Volume serialisation buffer size */
 
-typedef struct ReadContext {
+struct ReadContext {
    DeviceRecord *rec;                 /**< Record currently being processed */
    dlist *recs;                       /**< Linked list of record packets open */
    SESSION_LABEL sessrec;             /**< Start Of Session record info */

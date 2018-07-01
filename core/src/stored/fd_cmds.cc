@@ -162,6 +162,8 @@ void *handle_filed_connection(BareosSocket *fd, char *job_name)
       UpdateJobStatistics(jcr, now);
    }
 
+//   ReserveDevicesFiledStart(jcr);
+
    pthread_cond_signal(&jcr->job_start_wait); /* wake waiting job */
    FreeJcr(jcr);
 

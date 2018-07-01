@@ -180,13 +180,13 @@ void DeviceControlRecord::UnreserveDevice()
    dev->Unlock();
 }
 
-bool UseDeviceReserve(JobControlRecord *jcr)
+static bool wiffle(JobControlRecord *jcr, int32_t append, std::string dev_name)
 {
    ReserveContext reserve_context;
    memset(&reserve_context, 0, sizeof(ReserveContext));
 
    reserve_context.jcr = jcr;
-   reserve_context.append = jcr->append;
+   reserve_context.append = append;
 
    int wait_for_device_retries = 0;
    int repeat = 0;
@@ -296,62 +296,73 @@ bool UseDeviceReserve(JobControlRecord *jcr)
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);
       Jmsg(jcr, M_FATAL, 0, _("Device reservation failed for JobId=%d: %s\n"),
            jcr->JobId, jcr->errmsg);
-      jcr->dir_bsock->fsend(NO_device, jcr->dev_name);
+      jcr->dir_bsock->fsend(NO_device, dev_name.c_str());
 
       Dmsg1(debuglevel, ">dird: %s", jcr->dir_bsock->msg);
+      return false;
    }
-   ReleaseReserveMessages(jcr);
-   return ok;
+   return true;
 }
 
 StorageDefinitionMessage::StorageDefinitionMessage()
    : is_valid(false)
-   , regex("^use storage=(.{1,127}) media_type=(.{1,127}) "
-           "pool_name=(.{1,127}) pool_type=(.{1,127})"
-           "append=([0-9]) copy=([0-9]) stripe=([0-9])\n")
 {
    return;
 }
 
-bool StorageDefinitionMessage::ParseMessage(std::string unbashed_message)
+bool StorageDefinitionMessage::ParseMessage(const char *msg_in)
 {
    is_valid = false;
-   std::smatch sm;
-   std::string input(unbashed_message);
-   if (std::regex_match(input, sm, regex)) {
-      if (sm.size() == 8) {
-         StoreName = sm[1];
-         media_type = sm[2];
-         pool_name = sm[3];
-         pool_type = sm[4];
-         append = std::stoi(sm[5]);
-         Copy = std::stoi(sm[6]);
-         Stripe = std::stoi(sm[7]);
-         is_valid = true;
-      }
+   bool conversion_ok = false;
+
+   char msg[600]; /* do not alter original message */
+   strncpy(msg, msg_in, sizeof(msg));
+   UnbashSpaces(msg);
+
+   constexpr char use_storage[] =
+         "use storage=%127s media_type=%127s "
+         "pool_name=%127s pool_type=%127s append=%d copy=%d stripe=%d\n";
+
+   char sn[128], mt[128], pn[128], pt[128];
+   conversion_ok = sscanf(msg, use_storage,
+               sn, mt, pn, pt, &append, &Copy, &Stripe) == 7;
+
+   if (conversion_ok) {
+      StoreName = sn;
+      media_type = mt;
+      pool_name = pn;
+      pool_type = pt;
    }
-   return is_valid;
+
+   is_valid = conversion_ok;
+   return conversion_ok;
 }
 
 UseDeviceMessage::UseDeviceMessage()
    : is_valid(false)
-   , regex("use device=(.{1,127})\n")
 {
    return;
 }
 
-bool UseDeviceMessage::ParseMessage(std::string unbashed_message)
+bool UseDeviceMessage::ParseMessage(const char *msg_in)
 {
    is_valid = false;
-   std::smatch sm;
-   std::string input(unbashed_message);
-   if (std::regex_match(input, sm, regex)) {
-      if (sm.size() == 2) {
-         dev_name = sm[1];
-         is_valid = true;
-      }
+   bool conversion_ok = false;
+
+   char msg[200]; /* do not alter original message */
+   strncpy(msg, msg_in, sizeof(msg));
+   UnbashSpaces(msg);
+
+   constexpr char use_device[]  = "use device=%127s\n";
+   char dn[128];
+   conversion_ok = sscanf(msg, use_device, dn) == 1;
+
+   if (conversion_ok) {
+      dev_name = dn;
    }
-   return is_valid;
+
+   is_valid = conversion_ok;
+   return conversion_ok;
 }
 
 
@@ -382,9 +393,7 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
    UseDeviceMessage use_device_message;
    do {
       Dmsg1(debuglevel, "<dird: %s", jcr->dir_bsock->msg);
-      UnbashSpaces(jcr->dir_bsock->msg);
-
-      ok = storage_definition_message.ParseMessage(std::string(jcr->dir_bsock->msg));
+      ok = storage_definition_message.ParseMessage(jcr->dir_bsock->msg);
       if (!ok) {
          break;
       }
@@ -408,7 +417,6 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
        */
       while (jcr->dir_bsock->recv() >= 0) {
          Dmsg1(debuglevel, "<dird device: %s", jcr->dir_bsock->msg);
-         UnbashSpaces(jcr->dir_bsock->msg);
          ok = use_device_message.ParseMessage(jcr->dir_bsock->msg);
          if (!ok) {
             break;
@@ -431,10 +439,18 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
       ok = false;
    }
 
+   /*
+    * At this point, we have a list of all the Director's Storage resources indicated
+    * for this Job, which include Pool, PoolType, storage name, and Media type.
+    *
+    * Then for each of the Storage resources, we have a list of device names that were given.
+    *
+    * Wiffle through them and find one that can do the backup.
+    */
    if (ok) {
-      jcr->append = storage_definition_message.append;
-      strcpy(jcr->dev_name, use_device_message.dev_name.c_str());
-      return true;
+
+      ok = wiffle(jcr, storage_definition_message.append, use_device_message.dev_name);
+
    } else {
       UnbashSpaces(jcr->dir_bsock->msg);
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);
