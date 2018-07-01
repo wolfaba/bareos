@@ -64,30 +64,17 @@ static char NO_device[] =
 static char BAD_use[] =
    "3913 Bad use command: %s\n";
 
-static void *dir_heartbeat_thread(void *arg)
-{
-   JobControlRecord *jcr = static_cast<JobControlRecord *>(arg);
-   while (jcr->dir_heartbeat) {
-      Bmicrosleep(1,0);
-      if (jcr->dir_bsock) {
-         jcr->dir_bsock->signal(BNET_HEARTBEAT);
-      }
-   }
-   return nullptr;
-}
-
 static bool UseCommandDelegator(JobControlRecord *jcr, bool late_device_reservation)
 {
-   bool ok;
+   bool ok = false;
 
    if (!late_device_reservation) {
       ok = UseDeviceCmd(jcr);
-      jcr->dir_heartbeat = true;
-      pthread_create (&jcr->dir_heartbeat_thread_id, NULL, dir_heartbeat_thread, (void*)jcr);
+      if (ok) {
+         ok = UseDeviceReserve(jcr);
+      }
    } else {
-      jcr->dir_heartbeat = false;
-      pthread_join(jcr->dir_heartbeat_thread_id, NULL);
-      ok = UseDeviceReserve(jcr);
+      /* continue implementation in director --> ueb */
    }
    if (!ok) {
       jcr->setJobStatus(JS_ErrorTerminated);
@@ -103,6 +90,7 @@ bool use_cmd(JobControlRecord *jcr)
 
 bool ReserveDevicesFiledStart(JobControlRecord *jcr)
 {
+   /* --> ueb call this in the context of fd connection */
    return UseCommandDelegator(jcr, true);
 }
 
