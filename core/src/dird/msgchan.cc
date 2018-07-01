@@ -303,7 +303,7 @@ bool StartStorageDaemonJob(JobControlRecord *jcr, alist *rstore, alist *wstore, 
          sd->signal(BNET_EOD);           /* end of Devices */
       }
       sd->signal(BNET_EOD);              /* end of Storages */
-      if (BgetDirmsg(sd) > 0) { //--> ueb
+      if (BgetDirmsg(sd) > 0) {
          Dmsg1(100, "<stored: %s", sd->msg);
          /* ****FIXME**** save actual device name */
          ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;
@@ -341,7 +341,7 @@ bool StartStorageDaemonJob(JobControlRecord *jcr, alist *rstore, alist *wstore, 
          sd->signal(BNET_EOD);           /* end of Devices */
       }
       sd->signal(BNET_EOD);              /* end of Storages */
-      if (BgetDirmsg(sd) > 0) { //--> ueb
+      if (BgetDirmsg(sd) > 0) {
          Dmsg1(100, "<stored: %s", sd->msg);
          /* ****FIXME**** save actual device name */
          ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;

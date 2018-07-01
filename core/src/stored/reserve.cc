@@ -180,13 +180,13 @@ void DeviceControlRecord::UnreserveDevice()
    dev->Unlock();
 }
 
-static bool wiffle(JobControlRecord *jcr, int32_t append, std::string dev_name)
+bool UseDeviceReserve(JobControlRecord *jcr)
 {
    ReserveContext reserve_context;
    memset(&reserve_context, 0, sizeof(ReserveContext));
 
    reserve_context.jcr = jcr;
-   reserve_context.append = append;
+   reserve_context.append = jcr->append;
 
    int wait_for_device_retries = 0;
    int repeat = 0;
@@ -296,7 +296,7 @@ static bool wiffle(JobControlRecord *jcr, int32_t append, std::string dev_name)
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);
       Jmsg(jcr, M_FATAL, 0, _("Device reservation failed for JobId=%d: %s\n"),
            jcr->JobId, jcr->errmsg);
-      jcr->dir_bsock->fsend(NO_device, dev_name.c_str());
+      jcr->dir_bsock->fsend(NO_device, jcr->dev_name);
 
       Dmsg1(debuglevel, ">dird: %s", jcr->dir_bsock->msg);
       return false;
@@ -376,7 +376,6 @@ bool UseDeviceMessage::ParseMessage(const char *msg_in)
  * use storage=xxx media_type=yyy pool_name=xxx pool_type=yyy append=0 copy=0 strip=0
  * use device=bbb
  */
-#include <sstream>
 static bool UseDeviceCmd(JobControlRecord *jcr)
 {
    bool ok;
@@ -439,18 +438,10 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
       ok = false;
    }
 
-   /*
-    * At this point, we have a list of all the Director's Storage resources indicated
-    * for this Job, which include Pool, PoolType, storage name, and Media type.
-    *
-    * Then for each of the Storage resources, we have a list of device names that were given.
-    *
-    * Wiffle through them and find one that can do the backup.
-    */
    if (ok) {
-
-      ok = wiffle(jcr, storage_definition_message.append, use_device_message.dev_name);
-
+      jcr->append = storage_definition_message.append;
+      strcpy(jcr->dev_name, use_device_message.dev_name.c_str());
+      return true;
    } else {
       UnbashSpaces(jcr->dir_bsock->msg);
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);
