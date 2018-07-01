@@ -69,7 +69,7 @@ class StorageDefinitionMessage
 {
 public:
    StorageDefinitionMessage();
-   bool ParseMessage(std::string str);
+   bool ParseMessage(std::string unbashed_message);
 
    std::string StoreName, media_type, pool_name, pool_type;
    uint32_t append, Copy, Stripe;
@@ -83,7 +83,7 @@ class UseDeviceMessage
 {
 public:
    UseDeviceMessage();
-   bool ParseMessage(std::string str);
+   bool ParseMessage(std::string unbashed_message);
 
    std::string dev_name;
    bool is_valid;
@@ -104,6 +104,7 @@ DLL_IMP_EXP void UnreserveDevice(DeviceControlRecord *dcr);
 DLL_IMP_EXP bool FindSuitableDeviceForJob(JobControlRecord *jcr, ReserveContext &reserve_context);
 DLL_IMP_EXP int SearchResForDevice(ReserveContext &reserve_context);
 DLL_IMP_EXP void ReleaseReserveMessages(JobControlRecord *jcr);
+DLL_IMP_EXP bool ReserveDevicesFiledStart(JobControlRecord *jcr);
 
 #ifdef SD_DEBUG_LOCK
 DLL_IMP_EXP extern int reservations_lock_count;

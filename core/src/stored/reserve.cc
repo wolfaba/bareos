@@ -53,6 +53,7 @@ static bool ReserveDeviceForAppend(DeviceControlRecord *dcr, ReserveContext &res
 static bool UseDeviceCmd(JobControlRecord *jcr);
 static void QueueReserveMessage(JobControlRecord *jcr);
 static void PopReserveMessages(JobControlRecord *jcr);
+static bool UseDeviceReserve(JobControlRecord *jcr);
 
 /* Responses sent to Director daemon */
 static char OK_device[] =
@@ -63,14 +64,46 @@ static char NO_device[] =
 static char BAD_use[] =
    "3913 Bad use command: %s\n";
 
-bool use_cmd(JobControlRecord *jcr)
+static void *dir_heartbeat_thread(void *arg)
 {
-   if (!UseDeviceCmd(jcr)) {
+   JobControlRecord *jcr = static_cast<JobControlRecord *>(arg);
+   while (jcr->dir_heartbeat) {
+      Bmicrosleep(1,0);
+      if (jcr->dir_bsock) {
+         jcr->dir_bsock->signal(BNET_HEARTBEAT);
+      }
+   }
+   return nullptr;
+}
+
+static bool UseCommandDelegator(JobControlRecord *jcr, bool late_device_reservation)
+{
+   bool ok;
+
+   if (!late_device_reservation) {
+      ok = UseDeviceCmd(jcr);
+      jcr->dir_heartbeat = true;
+      pthread_create (&jcr->dir_heartbeat_thread_id, NULL, dir_heartbeat_thread, (void*)jcr);
+   } else {
+      jcr->dir_heartbeat = false;
+      pthread_join(jcr->dir_heartbeat_thread_id, NULL);
+      ok = UseDeviceReserve(jcr);
+   }
+   if (!ok) {
       jcr->setJobStatus(JS_ErrorTerminated);
       memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
-      return false;
    }
-   return true;
+   return ok;
+}
+
+bool use_cmd(JobControlRecord *jcr)
+{
+   return UseCommandDelegator(jcr, false);
+}
+
+bool ReserveDevicesFiledStart(JobControlRecord *jcr)
+{
+   return UseCommandDelegator(jcr, true);
 }
 
 /**
@@ -159,13 +192,13 @@ void DeviceControlRecord::UnreserveDevice()
    dev->Unlock();
 }
 
-static bool wiffle(JobControlRecord *jcr, int32_t append, std::string dev_name)
+bool UseDeviceReserve(JobControlRecord *jcr)
 {
    ReserveContext reserve_context;
    memset(&reserve_context, 0, sizeof(ReserveContext));
 
    reserve_context.jcr = jcr;
-   reserve_context.append = append;
+   reserve_context.append = jcr->append;
 
    int wait_for_device_retries = 0;
    int repeat = 0;
@@ -275,12 +308,12 @@ static bool wiffle(JobControlRecord *jcr, int32_t append, std::string dev_name)
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);
       Jmsg(jcr, M_FATAL, 0, _("Device reservation failed for JobId=%d: %s\n"),
            jcr->JobId, jcr->errmsg);
-      jcr->dir_bsock->fsend(NO_device, dev_name.c_str());
+      jcr->dir_bsock->fsend(NO_device, jcr->dev_name);
 
       Dmsg1(debuglevel, ">dird: %s", jcr->dir_bsock->msg);
-      return false;
    }
-   return true;
+   ReleaseReserveMessages(jcr);
+   return ok;
 }
 
 StorageDefinitionMessage::StorageDefinitionMessage()
@@ -292,11 +325,11 @@ StorageDefinitionMessage::StorageDefinitionMessage()
    return;
 }
 
-bool StorageDefinitionMessage::ParseMessage(std::string msg)
+bool StorageDefinitionMessage::ParseMessage(std::string unbashed_message)
 {
    is_valid = false;
    std::smatch sm;
-   std::string input(msg);
+   std::string input(unbashed_message);
    if (std::regex_match(input, sm, regex)) {
       if (sm.size() == 8) {
          StoreName = sm[1];
@@ -319,11 +352,11 @@ UseDeviceMessage::UseDeviceMessage()
    return;
 }
 
-bool UseDeviceMessage::ParseMessage(std::string msg)
+bool UseDeviceMessage::ParseMessage(std::string unbashed_message)
 {
    is_valid = false;
    std::smatch sm;
-   std::string input(msg);
+   std::string input(unbashed_message);
    if (std::regex_match(input, sm, regex)) {
       if (sm.size() == 2) {
          dev_name = sm[1];
@@ -410,18 +443,10 @@ static bool UseDeviceCmd(JobControlRecord *jcr)
       ok = false;
    }
 
-   /*
-    * At this point, we have a list of all the Director's Storage resources indicated
-    * for this Job, which include Pool, PoolType, storage name, and Media type.
-    *
-    * Then for each of the Storage resources, we have a list of device names that were given.
-    *
-    * Wiffle through them and find one that can do the backup.
-    */
    if (ok) {
-
-      ok = wiffle(jcr, storage_definition_message.append, use_device_message.dev_name);
-
+      jcr->append = storage_definition_message.append;
+      strcpy(jcr->dev_name, use_device_message.dev_name.c_str());
+      return true;
    } else {
       UnbashSpaces(jcr->dir_bsock->msg);
       PmStrcpy(jcr->errmsg, jcr->dir_bsock->msg);

@@ -286,9 +286,15 @@ private:
    int32_t JobLevel_;                    /**< Job level */
    int32_t Protocol_;                    /**< Backup Protocol */
    bool my_thread_killable;               /**< Can we kill the thread? */
+
 public:
       JobControlRecord() {
             Dmsg0(100, "Contruct JobControlRecord\n");
+#if STORAGE_DAEMON
+            dir_heartbeat = false;
+            dir_heartbeat_thread_id = 0;
+            append = 0;
+#endif
       }
 
       ~JobControlRecord() {
@@ -591,6 +597,10 @@ public:
    bool Resched;                          /**< Job may be rescheduled */
    bool insert_jobmedia_records;          /**< Need to insert job media records */
    uint64_t RemainingQuota;               /**< Available bytes to use as quota */
+   bool dir_heartbeat;
+   pthread_t dir_heartbeat_thread_id;
+   unsigned int append;
+   char dev_name[128];
 
    /*
     * Parameters for Open Read Session
