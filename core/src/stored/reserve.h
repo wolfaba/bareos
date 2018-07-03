@@ -70,10 +70,10 @@ public:
    StorageDefinitionMessage();
    bool ParseMessage(const char *msg);
 
-   const char *StoreName() const { return store_name_.c_str(); }
-   const char *MediaType() const { return media_type_.c_str(); }
-   const char *PoolName() const { return pool_name_.c_str(); }
-   const char *PoolType() const { return pool_type_.c_str(); }
+   const std::string &StoreName() const { return store_name_; }
+   const std::string &MediaType() const { return media_type_; }
+   const std::string &PoolName() const { return pool_name_; }
+   const std::string &PoolType() const { return pool_type_; }
    bool Append() const { return append_; }
    bool Copy() const { return copy_; }
    bool Stripe() const { return stripe_; }
@@ -89,7 +89,7 @@ class UseDeviceMessage
 public:
    UseDeviceMessage();
    bool ParseMessage(const char *msg);
-   const char *DevName() const { return dev_name_.c_str(); }
+   const std::string &DevName() const { return dev_name_; }
 
 private:
    std::string dev_name_;
