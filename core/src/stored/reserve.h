@@ -36,6 +36,10 @@
  *      the media and pool info in the JobControlRecord.  This class is used
  *      only temporarily in this file.
  */
+
+#ifndef BAREOS_STORED_RESERVE_H_
+#define BAREOS_STORED_RESERVE_H_
+
 struct DirectorStorage {
    alist *device;
    bool append;
@@ -62,38 +66,6 @@ struct ReserveContext {
    bool notify_dir;                   /**< Notify DIR about device */
    bool append;                       /**< set if append device */
    char VolumeName[MAX_NAME_LENGTH];  /**< Vol name suggested by DIR */
-};
-
-class StorageDefinitionMessage
-{
-public:
-   StorageDefinitionMessage();
-   bool ParseMessage(const char *msg);
-
-   const std::string &StoreName() const { return store_name_; }
-   const std::string &MediaType() const { return media_type_; }
-   const std::string &PoolName() const { return pool_name_; }
-   const std::string &PoolType() const { return pool_type_; }
-   bool Append() const { return append_; }
-   bool Copy() const { return copy_; }
-   bool Stripe() const { return stripe_; }
-
-private:
-   bool is_valid_;
-   bool append_, copy_, stripe_;
-   std::string store_name_, media_type_, pool_name_, pool_type_;
-};
-
-class UseDeviceMessage
-{
-public:
-   UseDeviceMessage();
-   bool ParseMessage(const char *msg);
-   const std::string &DevName() const { return dev_name_; }
-
-private:
-   std::string dev_name_;
-   bool is_valid_;
 };
 
 DLL_IMP_EXP void InitReservationsLock();
@@ -160,3 +132,4 @@ DLL_IMP_EXP extern int read_vol_list_lock_count;
 #define UnlockReadVolumes() _unLockReadVolumes()
 #endif
 
+#endif /* BAREOS_STORED_RESERVE_H_ */

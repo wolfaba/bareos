@@ -21,6 +21,8 @@
 #ifndef BAREOS_LIB_UTIL_H_
 #define BAREOS_LIB_UTIL_H_
 
+#include "include/bareos.h"
+
 DLL_IMP_EXP void EscapeString(PoolMem &snew, char *old, int len);
 DLL_IMP_EXP bool IsBufZero(char *buf, int len);
 DLL_IMP_EXP void lcase(char *str);
