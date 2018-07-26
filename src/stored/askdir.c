@@ -268,7 +268,7 @@ bool SD_DCR::dir_get_volume_info(enum get_vol_info_rw writing)
  */
 bool SD_DCR::dir_find_next_appendable_volume()
 {
-    bool retval;
+    bool retval = false;
     BSOCK *dir = jcr->dir_bsock;
     POOL_MEM unwanted_volumes(PM_MESSAGE);
 
@@ -324,7 +324,6 @@ bool SD_DCR::dir_find_next_appendable_volume()
        Dmsg2(dbglvl, "No vol. index %d return false. dev=%s\n", vol_index, dev->print_name());
        break;
     }
-    retval = false;
     VolumeName[0] = 0;
 
 get_out:

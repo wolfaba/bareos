@@ -28,6 +28,8 @@
  * Routines for handling the autochanger.
  */
 
+#include <string>
+
 #include "bareos.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
 
@@ -37,6 +39,26 @@ static bool unlock_changer(DCR *dcr);
 static bool unload_other_drive(DCR *dcr, slot_number_t slot, bool lock_set);
 static char *transfer_edit_device_codes(DCR *dcr, POOLMEM *&omsg, const char *imsg, const char *cmd,
                                         slot_number_t src_slot, slot_number_t dst_slot);
+#include <execinfo.h>
+
+static void
+print_trace (JCR *jcr)
+{
+  void *array[6];
+  size_t size;
+  char **strings;
+  size_t i;
+
+  size = backtrace (array, 6);
+  strings = backtrace_symbols (array, size);
+
+  Jmsg (jcr, M_INFO, 0, "Obtained %zd stack frames.\n", size);
+
+  for (i = 0; i < size; i++)
+     Jmsg (jcr, M_INFO, 0, "%s\n", strings[i]);
+
+  actuallyfree (strings);
+}
 
 /**
  * Init all the autochanger resources found
@@ -109,10 +131,12 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
 {
    POOLMEM *changer;
    int rtn_stat = -1;                 /* error status */
-   slot_number_t slot;
+   slot_number_t wanted_slot;
    JCR *jcr = dcr->jcr;
    drive_number_t drive;
    DEVICE * volatile dev = dcr->dev;
+
+   print_trace(jcr);
 
    if (!dev->is_autochanger()) {
       Dmsg1(100, "Device %s is not an autochanger\n", dev->print_name());
@@ -128,7 +152,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
    }
 
    drive = dev->drive_index;
-   slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
+   wanted_slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
    Dmsg3(100, "autoload: slot=%hd InChgr=%d Vol=%s\n", dcr->VolCatInfo.Slot,
          dcr->VolCatInfo.InChanger, dcr->getVolCatName());
 
@@ -136,7 +160,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
     * Handle autoloaders here.  If we cannot autoload it, we will return 0 so that
     * the sysop will be asked to load it.
     */
-   if (writing && slot <= 0) {
+   if (writing && wanted_slot <= 0) {
       if (dir) {
          return 0;                    /* For user, bail out right now */
       }
@@ -145,21 +169,21 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
        * ***FIXME*** this really should not be here
        */
       if (dcr->dir_find_next_appendable_volume()) {
-         slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
+         wanted_slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
       } else {
-         slot = 0;
+         wanted_slot = 0;
       }
    }
-   Dmsg1(400, "Want changer slot=%hd\n", slot);
+   Dmsg1(400, "Want changer slot=%hd\n", wanted_slot);
 
    changer = get_pool_memory(PM_FNAME);
-   if (slot <= 0) {
+   if (wanted_slot <= 0) {
       /*
        * Suppress info when polling
        */
       if (!dev->poll) {
          Jmsg(jcr, M_INFO, 0, _("No slot defined in catalog (slot=%hd) for Volume \"%s\" on %s.\n"),
-              slot, dcr->getVolCatName(), dev->print_name());
+               wanted_slot, dcr->getVolCatName(), dev->print_name());
          Jmsg(jcr, M_INFO, 0, _("Cartridge change or \"update slots\" may be required.\n"));
       }
       rtn_stat = 0;
@@ -169,10 +193,10 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
        */
       if (!dev->poll) {
          Jmsg(jcr, M_INFO, 0, _("No \"Changer Device\" for %s. Manual load of Volume may be required.\n"),
-              dev->print_name());
+               dev->print_name());
       }
       rtn_stat = 0;
-  } else if (!dcr->device->changer_command) {
+   } else if (!dcr->device->changer_command) {
       /*
        * Suppress info when polling
        */
@@ -180,16 +204,16 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          Jmsg(jcr, M_INFO, 0, _("No \"Changer Command\" for %s. Manual load of Volume may be required.\n"), dev->print_name());
       }
       rtn_stat = 0;
-  } else {
+   } else {
       uint32_t timeout = dcr->device->max_changer_wait;
       int status;
-      slot_number_t loaded;
+      slot_number_t loaded_slot;
 
       /*
        * Attempt to load the Volume
        */
-      loaded = get_autochanger_loaded_slot(dcr);
-      if (loaded != slot) {
+      loaded_slot = get_autochanger_loaded_slot(dcr);
+      if (loaded_slot != wanted_slot) {
          POOL_MEM results(PM_MESSAGE);
 
          if (!lock_changer(dcr)) {
@@ -200,15 +224,15 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          /*
           * Unload anything in our drive
           */
-         if (!unload_autochanger(dcr, loaded, true)) {
+         if (!unload_autochanger(dcr, loaded_slot, true)) {
             unlock_changer(dcr);
             goto bail_out;
          }
 
          /*
-          * Make sure desired slot is unloaded
+          * Make sure desired wanted_slot is unloaded
           */
-         if (!unload_other_drive(dcr, slot, true)) {
+         if (!unload_other_drive(dcr, wanted_slot, true)) {
             unlock_changer(dcr);
             goto bail_out;
          }
@@ -216,20 +240,20 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          /*
           * Load the desired volume.
           */
-         Dmsg2(100, "Doing changer load slot %hd %s\n", slot, dev->print_name());
+         Dmsg3(100, "Doing changer load slot %hd (%d) %s\n", wanted_slot, dcr->VolCatInfo.Slot, dev->print_name());
          Jmsg(jcr, M_INFO, 0,
-              _("3304 Issuing autochanger \"load slot %hd, drive %hd\" command.\n"),
-              slot, drive);
-         dcr->VolCatInfo.Slot = slot;    /* slot to be loaded */
+               _("3304 Issuing autochanger \"load slot %hd (%d), drive %hd\" command.\n"),
+               wanted_slot, dcr->VolCatInfo.Slot, drive);
+         dcr->VolCatInfo.Slot = wanted_slot;    /* slot to be loaded_slot */
          changer = edit_device_codes(dcr, changer, dcr->device->changer_command, "load");
          dev->close(dcr);
          Dmsg1(200, "Run program=%s\n", changer);
          status = run_program_full_output(changer, timeout, results.addr());
          if (status == 0) {
             Jmsg(jcr, M_INFO, 0, _("3305 Autochanger \"load slot %hd, drive %hd\", status is OK.\n"),
-                    slot, drive);
-            Dmsg2(100, "load slot %hd, drive %hd, status is OK.\n", slot, drive);
-            dev->set_slot(slot);      /* set currently loaded slot */
+                  wanted_slot, drive);
+            Dmsg2(100, "load slot %hd, drive %hd, status is OK.\n", wanted_slot, drive);
+            dev->set_slot(wanted_slot);      /* set currently loaded_slot slot */
             if (dev->vol) {
                /*
                 * We just swapped this Volume so it cannot be swapping any more
@@ -239,25 +263,31 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          } else {
             berrno be;
             be.set_errno(status);
-            Dmsg3(100, "load slot %hd, drive %hd, bad stats=%s.\n", slot, drive,
-               be.bstrerror());
-            Jmsg(jcr, M_FATAL, 0, _("3992 Bad autochanger \"load slot %hd, drive %hd\": "
-                 "ERR=%s.\nResults=%s\n"),
-                 slot, drive, be.bstrerror(), results.c_str());
-            rtn_stat = -1;            /* hard error */
-            dev->set_slot(-1);        /* mark unknown */
+            std::string tmp(results.c_str());
+            if(tmp.find("Source Element Address") != std::string::npos
+                  && tmp.find("is Empty") != std::string::npos) {
+               rtn_stat = -3;            /* medium not found in slot */
+            } else {
+               rtn_stat = -1;            /* hard error */
+            }
+            Dmsg3(100, "load slot %hd, drive %hd, bad stats=%s.\n", wanted_slot, drive,
+                  be.bstrerror());
+            Jmsg(jcr, rtn_stat == -3 ? M_ERROR : M_FATAL, 0, _("3992 Bad autochanger \"load slot %hd, drive %hd\": "
+                     "ERR=%s.\nResults=%s\n"),
+                  wanted_slot, drive, be.bstrerror(), results.c_str());
+            dev->set_slot(-1);           /* mark unknown */
          }
-         Dmsg2(100, "load slot %hd status=%d\n", slot, status);
+         Dmsg2(100, "load slot %hd status=%d\n", wanted_slot, status);
          unlock_changer(dcr);
       } else {
          status = 0;                  /* we got what we want */
-         dev->set_slot(slot);         /* set currently loaded slot */
+         dev->set_slot(wanted_slot);         /* set currently loaded_slot slot */
       }
 
       Dmsg1(100, "After changer, status=%d\n", status);
 
       if (status == 0) {              /* did we succeed? */
-         rtn_stat = 1;                /* tape loaded by changer */
+         rtn_stat = 1;                /* tape loaded_slot by changer */
       }
    }
 
