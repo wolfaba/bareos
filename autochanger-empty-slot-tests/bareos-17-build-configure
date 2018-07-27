@@ -1,0 +1,54 @@
+export CFLAGS="-O0 -g"
+export CXXFLAGS=$CFLAGS
+
+./configure --build=x86_64-redhat-linux-gnu --host=x86_64-redhat-linux-gnu \
+--program-prefix= \
+--disable-dependency-tracking \
+--prefix=/usr \
+--exec-prefix=/usr \
+--bindir=/usr/bin \
+--sbindir=/usr/sbin \
+--sysconfdir=/etc \
+--datadir=/usr/share \
+--includedir=/usr/include \
+--libdir=/usr/lib64 \
+--libexecdir=/usr/libexec \
+--localstatedir=/var \
+--sharedstatedir=/var/lib \
+--mandir=/usr/share/man \
+--infodir=/usr/share/info \
+--prefix=/usr \
+--libdir=/usr/lib64/bareos \
+--sbindir=/usr/sbin \
+--with-sbin-perm=755 \
+--sysconfdir=/etc \
+--with-confdir=/etc/bareos \
+--mandir=/usr/share/man \
+--docdir=/usr/share/doc/bareos \
+--htmldir=/usr/share/doc/bareos/html \
+--with-archivedir=/var/lib/bareos/storage \
+--with-backenddir=/usr/lib64/bareos/backends \
+--with-scriptdir=/usr/lib/bareos/scripts \
+--with-working-dir=/var/lib/bareos \
+--with-plugindir=/usr/lib64/bareos/plugins \
+--with-pid-dir=/var/lib/bareos \
+--with-bsrdir=/var/lib/bareos \
+--with-logdir=/var/log/bareos \
+--with-subsys-dir=/var/lock \
+--with-python \
+--enable-smartalloc \
+--disable-conio \
+--enable-readline \
+--enable-batch-insert \
+--enable-dynamic-cats-backends \
+--enable-dynamic-storage-backends \
+--enable-scsi-crypto \
+--enable-lmdb \
+--enable-ndmp \
+--enable-ipv6 \
+--enable-acl \
+--enable-xattr \
+--with-postgresql \
+--with-openssl \
+--with-systemd \
+--enable-includes
