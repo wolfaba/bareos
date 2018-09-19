@@ -208,7 +208,6 @@ static dpl_status_t chunked_volume_truncate_callback(dpl_dirent_t *dirent, dpl_c
 }
 
 
-
 /*
  * Generic function that walks a dirname and calls the callback
  * function for each entry it finds in that directory.
@@ -343,6 +342,11 @@ bool droplet_device::check_remote()
       break;
    }
 
+   if (sysmd) {
+      dpl_sysmd_free(sysmd);
+      sysmd = NULL;
+   }
+
    return retval;
 }
 
@@ -379,6 +383,11 @@ bool droplet_device::remote_chunked_volume_exists()
    default:
       Dmsg1(100, "remote_chunked_volume %s does not exists\n", chunk_dir.c_str());
       break;
+   }
+
+   if (sysmd) {
+      dpl_sysmd_free(sysmd);
+      sysmd = NULL;
    }
 
    return retval;
