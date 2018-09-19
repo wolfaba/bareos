@@ -184,6 +184,15 @@ static dpl_status_t chunked_volume_truncate_callback(dpl_dirent_t *dirent, dpl_c
     * Make sure it starts with [0-9] e.g. a volume chunk.
     */
    if (*dirent->name >= '0' && *dirent->name <= '9') {
+
+      // FIXME: only for testing
+      if (bstrcmp(dirent->name, "0007")) {
+         status = DPL_EIO;
+         Emsg2(M_ERROR, 0, "FAKE: Failed to delete chunk file %s using dpl_unlink(): ERR=%s.\n",
+               dirent->fqn.path, dpl_status_str(status));
+         return status;
+      }
+
       status = dpl_unlink(ctx, dirent->name);
 
       switch (status) {
