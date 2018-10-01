@@ -744,12 +744,14 @@ bool droplet_device::truncate_remote_chunked_volume(DCR *dcr)
 {
    POOL_MEM chunk_dir(PM_FNAME);
 
+   Dmsg1(100, "truncate_remote_chunked_volume(%s) start", getVolCatName());
    Mmsg(chunk_dir, "/%s", getVolCatName());
    //if (!walk_directory(chunk_dir.c_str(), chunked_volume_truncate_callback, NULL)) {
    if (!walk_chunks(chunk_dir.c_str(), chunked_volume_truncate_callback, NULL)) {
       /* errno already set in walk_directory. */
       return false;
    }
+   Dmsg1(100, "truncate_remote_chunked_volume(%s) finished", getVolCatName());
 
    return true;
 }
@@ -1086,6 +1088,7 @@ ssize_t droplet_device::chunked_remote_volume_size()
    }
 #endif
 
+   Dmsg1(100, "get chunked_remote_volume_size(%s)", getVolCatName());
    //if (!walk_directory(chunk_dir.c_str(), chunked_volume_size_callback, &volumesize)) {
    if (!walk_chunks(chunk_dir.c_str(), chunked_volume_size_callback, &volumesize)) {
       /* errno is already set in walk_directory */
@@ -1098,7 +1101,7 @@ bail_out:
       dpl_sysmd_free(sysmd);
    }
 
-   Dmsg2(100, "Volume size of volume %s, %lld\n", chunk_dir.c_str(), volumesize);
+   Dmsg2(100, "Size of volume %s: %lld\n", chunk_dir.c_str(), volumesize);
 
    return volumesize;
 }
