@@ -39,6 +39,8 @@
  */
 typedef dpl_status_t (*t_dpl_walk_directory_call_back)(dpl_dirent_t *dirent, dpl_ctx_t *ctx,
                                                        const char *dirname, void *data);
+typedef dpl_status_t (*t_dpl_walk_chunks_call_back)(dpl_sysmd_t *sysmd, dpl_ctx_t *ctx, const char *chunkpath, void *data);
+
 
 
 
@@ -47,6 +49,8 @@ private:
    /*
     * Private Members
     */
+   /* maximun number of chunks in a volume (0000 to 9999) */
+   const int m_max_chunks = 10000;
    char *m_configstring;
    const char *m_profile;
    const char *m_location;
@@ -60,6 +64,7 @@ private:
     * Private Methods
     */
    bool initialize();
+   dpl_status_t check_path(const char *path);
 
    /*
     * Interface from chunked_device
@@ -72,6 +77,7 @@ private:
    bool truncate_remote_chunked_volume(DCR *dcr);
 
    bool walk_directory(const char *dirname, t_dpl_walk_directory_call_back callback, void *data);
+   bool walk_chunks(const char *dirname, t_dpl_walk_chunks_call_back callback, void *data);
 
 public:
    /*
