@@ -346,7 +346,7 @@ static dpl_status_t chunked_volume_truncate_callback(dpl_sysmd_t *sysmd, dpl_ctx
  * @return: true - if no error occured
  *          false - if an error has occured. Sets dev_errno and errmsg to the first error.
  */
-bool droplet_device::walk_chunks(const char *dirname, t_dpl_walk_chunks_call_back callback, void *data)
+bool droplet_device::walk_chunks(const char *dirname, t_dpl_walk_chunks_call_back callback, void *data, bool ignore_gaps)
 {
    bool retval = true;
    dpl_status_t status;
@@ -379,8 +379,17 @@ bool droplet_device::walk_chunks(const char *dirname, t_dpl_walk_chunks_call_bac
                retval = false;
             }
             break;
+         case DPL_ENOENT:
+            if (ignore_gaps) {
+               Dmsg1(1000, "chunk %s does not exists. Skipped.\n", path.c_str());
+               i++;
+            } else {
+               Dmsg1(100, "chunk %s does not exists. Exiting.\n", path.c_str());
+               found = false;
+            }
+            break;
          default:
-            Dmsg1(100, "chunk %s does not exists. Exiting.\n", path.c_str());
+            Dmsg2(100, "chunk %s failure: %s. Exiting.\n", path.c_str(), dpl_status_str(callback_status));
             found = false;
             break;
       }
@@ -744,14 +753,15 @@ bool droplet_device::truncate_remote_chunked_volume(DCR *dcr)
 {
    POOL_MEM chunk_dir(PM_FNAME);
 
-   Dmsg1(100, "truncate_remote_chunked_volume(%s) start", getVolCatName());
+   Dmsg1(100, "truncate_remote_chunked_volume(%s) start.\n", getVolCatName());
    Mmsg(chunk_dir, "/%s", getVolCatName());
    //if (!walk_directory(chunk_dir.c_str(), chunked_volume_truncate_callback, NULL)) {
-   if (!walk_chunks(chunk_dir.c_str(), chunked_volume_truncate_callback, NULL)) {
+   bool ignore_gaps = true;
+   if (!walk_chunks(chunk_dir.c_str(), chunked_volume_truncate_callback, NULL, ignore_gaps)) {
       /* errno already set in walk_directory. */
       return false;
    }
-   Dmsg1(100, "truncate_remote_chunked_volume(%s) finished", getVolCatName());
+   Dmsg1(100, "truncate_remote_chunked_volume(%s) finished.\n", getVolCatName());
 
    return true;
 }

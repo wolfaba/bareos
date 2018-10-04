@@ -77,7 +77,7 @@ private:
    bool truncate_remote_chunked_volume(DCR *dcr);
 
    bool walk_directory(const char *dirname, t_dpl_walk_directory_call_back callback, void *data);
-   bool walk_chunks(const char *dirname, t_dpl_walk_chunks_call_back callback, void *data);
+   bool walk_chunks(const char *dirname, t_dpl_walk_chunks_call_back callback, void *data, bool ignore_gaps = false);
 
 public:
    /*
