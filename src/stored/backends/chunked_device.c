@@ -1197,7 +1197,7 @@ bool chunked_device::is_written()
     * Make sure there is also nothing inflight to the backing store anymore.
     */
    if (nr_inflight_chunks() > 0) {
-      Dmsg1(100, "volume %s is pending, as there are %d inflight chunks\n", m_current_volname);
+      Dmsg1(100, "volume %s is pending, as there are inflight chunks\n", m_current_volname);
       return false;
    }
 
