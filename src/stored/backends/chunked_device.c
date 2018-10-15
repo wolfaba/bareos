@@ -1188,11 +1188,16 @@ bool chunked_device::is_written()
     * its not fully stored on the backing store yet.
     */
 
+   if (m_current_chunk->need_flushing) {
+      Dmsg1(100, "volume %s is pending, as current chunk needs flushing\n", m_current_volname);
+      return false;
+   }
+
    /*
     * Make sure there is also nothing inflight to the backing store anymore.
     */
    if (nr_inflight_chunks() > 0) {
-      Dmsg0(100, "is_written = false, as there are inflight chunks\n");
+      Dmsg1(100, "volume %s is pending, as there are %d inflight chunks\n", m_current_volname);
       return false;
    }
 
@@ -1212,10 +1217,21 @@ bool chunked_device::is_written()
          request = (chunk_io_request *)m_cb->peek(PEEK_FIRST, m_current_volname, compare_volume_name);
          if (request) {
             free(request);
-            Dmsg0(100, "is_written = false, as there are queued write requests\n");
+            Dmsg1(100, "volume %s is pending, as there are queued write requests\n", m_current_volname);
             return false;
          }
       }
+   }
+
+   /* compare expected to written volume size */
+   ssize_t remote_volume_size = chunked_remote_volume_size();
+   Dmsg3(100, "volume: %s, chunked_volume_size = %lld, chunked_remote_volume_size = %lld, VolCatInfo.VolCatWrites = %lld\n",
+      m_current_volname /*getVolCatName() */, remote_volume_size, VolCatInfo.VolCatBytes);
+
+   if (remote_volume_size < VolCatInfo.VolCatBytes) {
+      Dmsg3(100, "volume %s is pending, as 'remote volume size' = %lld < 'catalog volume size' = %lld\n",
+            m_current_volname, remote_volume_size, VolCatInfo.VolCatBytes);
+      return false;
    }
 
    return true;
@@ -1227,10 +1243,20 @@ bool chunked_device::is_written()
  */
 bool chunked_device::wait_until_chunks_written()
 {
+   bool retval = true;
+
+   if (m_current_chunk->need_flushing) {
+      if (!flush_chunk(false /* release */, false /* move_to_next_chunk */)) {
+         dev_errno = EIO;
+         retval = false;
+      }
+   }
+
    while (!is_written()) {
       bmicrosleep(DEFAULT_RECHECK_INTERVAL_WRITE_BUFFER, 0);
    }
-   return true;
+
+   return retval;
 }
 
 
