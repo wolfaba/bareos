@@ -1028,7 +1028,20 @@ int chunked_device::close_chunk()
          } else {
             dev_errno = EIO;
          }
+      } else {
+         /*
+          * If chunked_device::wait_until_chunks_written() has been called before,
+          * chunk has been flushed (buffer given to an io thread),
+          * but not released. Therefore the buffer is set to NULL,
+          * as normally done by flush_chunk(true, *).
+          */
+         if (m_io_threads && m_current_chunk->buffer) {
+            free_chunkbuffer(m_current_chunk->buffer);
+            m_current_chunk->buffer = NULL;
+         }
+         retval = 0;
       }
+
 
       /*
        * Invalidate chunk.
@@ -1196,8 +1209,9 @@ bool chunked_device::is_written()
    /*
     * Make sure there is also nothing inflight to the backing store anymore.
     */
-   if (nr_inflight_chunks() > 0) {
-      Dmsg1(100, "volume %s is pending, as there are inflight chunks\n", m_current_volname);
+   int inflight_chunks = nr_inflight_chunks();
+   if (inflight_chunks > 0) {
+      Dmsg2(100, "volume %s is pending, as there are %d inflight chunks\n", m_current_volname, inflight_chunks);
       return false;
    }
 
@@ -1225,7 +1239,7 @@ bool chunked_device::is_written()
 
    /* compare expected to written volume size */
    ssize_t remote_volume_size = chunked_remote_volume_size();
-   Dmsg3(100, "volume: %s, chunked_volume_size = %lld, chunked_remote_volume_size = %lld, VolCatInfo.VolCatWrites = %lld\n",
+   Dmsg3(100, "volume: %s, chunked_remote_volume_size = %lld, VolCatInfo.VolCatBytes = %lld\n",
       m_current_volname /*getVolCatName() */, remote_volume_size, VolCatInfo.VolCatBytes);
 
    if (remote_volume_size < VolCatInfo.VolCatBytes) {
