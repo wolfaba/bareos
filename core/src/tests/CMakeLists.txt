@@ -311,3 +311,13 @@ target_link_libraries(thread_list
 
 gtest_discover_tests(thread_list TEST_PREFIX gtest:)
 
+####### test_job_control_record #####################################
+add_executable(test_job_control_record job_control_record.cc)
+
+target_link_libraries(test_job_control_record
+   bareos
+   ${GTEST_LIBRARIES}
+   ${GTEST_MAIN_LIBRARIES}
+)
+gtest_discover_tests(test_job_control_record TEST_PREFIX gtest:)
+
