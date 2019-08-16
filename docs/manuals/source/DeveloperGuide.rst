@@ -5,6 +5,7 @@ Developer Guide
 
    DeveloperGuide/generaldevel.rst
    DeveloperGuide/BuildAndTestBareos.rst
+   DeveloperGuide/BuildBareosPackages.rst
    DeveloperGuide/gitworkflow.rst
    DeveloperGuide/messages.rst
    DeveloperGuide/pluginAPI.rst
