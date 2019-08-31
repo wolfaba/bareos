@@ -21,6 +21,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(bareos NONE)
 
+
 set(default_build_type "Debug")
 # enable "make test"
 enable_testing()
