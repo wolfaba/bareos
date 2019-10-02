@@ -136,6 +136,10 @@ BuildRequires: libtirpc-devel
 %define ceph 1
 %endif
 
+%if 0%{?centos} >= 8
+%define ceph 1
+%endif
+
 # use Developer Toolset 7 compiler as standard is too old
 %if 0%{?centos_version} == 600 || 0%{?rhel_version} == 600
 BuildRequires: devtoolset-7-gcc
